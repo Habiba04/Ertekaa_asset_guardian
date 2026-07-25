@@ -1,0 +1,55 @@
+require('dotenv').config();
+const path = require('path');
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+
+const { testConnection } = require('../config/database');
+const { syncDatabase } = require('./models');
+const apiRouter = require('./routes');
+const { notFoundHandler, errorHandler } = require('./middlewares/errorHandler.middleware');
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(helmet());
+app.use(
+  cors({
+    origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+    credentials: true,
+  })
+);
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true }));
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'asset-guardian-backend', timestamp: new Date().toISOString() });
+});
+
+// Serve the PowerShell agent + installer as direct downloads for the
+// Settings > Agent Deployment Hub screen.
+app.use('/downloads', express.static(path.join(__dirname, '..', '..', 'agent')));
+
+app.use('/api', apiRouter);
+
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+async function start() {
+  try {
+    await testConnection();
+    await syncDatabase();
+    app.listen(PORT, () => {
+      console.log(`[server] Asset Guardian API listening on http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error('[server] Failed to start:', err);
+    process.exit(1);
+  }
+}
+
+start();
+
+module.exports = app;
