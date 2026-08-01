@@ -17,7 +17,9 @@
     "restrictedTitle": "Restricted access.",
     "restrictedBody": "This console is for authorized IT personnel only. All sessions are logged and monitored.",
     "footer": "Asset Guardian v2.1.4 · © 2025 Corp IT",
-    "invalidCredentials": "Invalid username or password."
+    "invalidCredentials": "Invalid username or password.",
+    "forgotPasswordTitle": "Forgot your password?",
+    "forgotPasswordBody": "Asset Guardian doesn't send password reset emails. Contact a Super Admin in your organization — they can reset your password for you from Settings → IT Administrator Accounts."
   },
   "setup": {
     "title": "Create the Super Admin Account",
@@ -29,7 +31,8 @@
     "confirmPassword": "Confirm Password",
     "createAccount": "Create Super Admin Account",
     "passwordMismatch": "Passwords do not match.",
-    "passwordTooShort": "Password must be at least 8 characters long."
+    "passwordTooShort": "Password must be at least 8 characters long.",
+    "usernameNoSpaces": "Username cannot contain spaces."
   },
   "sidebar": {
     "groupMain": "Main",
@@ -124,7 +127,9 @@
     "syncToastAll": "Full sync complete.",
     "statusOnline": "Online",
     "statusRemote": "Remote",
-    "statusRogue": "Rogue"
+    "statusRogue": "Rogue",
+    "allDeviceTypes": "All Device Types",
+    "importToast": "{{created}} created, {{updated}} updated, {{skipped}} skipped."
   },
   "drawer": {
     "tabHardware": "Hardware",
@@ -159,7 +164,16 @@
     "changesSaved": "Changes saved",
     "deviceHistory": "Device History",
     "recordedEvents": "{{count}} recorded event{{plural}} for this device",
-    "noActivity": "No activity recorded for this device."
+    "noActivity": "No activity recorded for this device.",
+    "diskStorage": "Disk Storage",
+    "macFormatError": "MAC address must follow the format AA:BB:CC:DD:EE:FF.",
+    "editingLockNotice": "Editing — click outside is disabled until you save or cancel.",
+    "installedApps": "Installed Applications",
+    "noInstalledApps": "No installed application data recorded for this device.",
+    "pingDevice": "Ping Device",
+    "pinging": "Pinging…",
+    "pingReachable": "Reachable ({{ms}} ms)",
+    "pingUnreachable": "Unreachable"
   },
   "addAssetModal": {
     "title": "Add New Asset Manually",
@@ -187,7 +201,20 @@
     "macRequired": "MAC address is required",
     "ownerRequired": "Owner name is required",
     "departmentRequired": "Department is required",
-    "locationRequired": "Location is required"
+    "locationRequired": "Location is required",
+    "macFormatError": "MAC address must follow the format AA:BB:CC:DD:EE:FF.",
+    "hostnamePreviewPending": "Select Location and Department to preview",
+    "hostNamePreview": "Host Name (auto-generated)",
+    "oldHostName": "Old Host Name",
+    "manufacturer": "Manufacturer",
+    "model": "Model",
+    "processor": "Processor",
+    "operatingSystem": "Operating System",
+    "memory": "Memory (RAM)",
+    "diskStorage": "Disk Storage",
+    "ipAddress": "IP Address",
+    "lastUser": "Last Logged User",
+    "maintenanceDate": "Last Maintenance Date"
   },
   "importModal": {
     "title": "Import Devices from File",
@@ -195,7 +222,16 @@
     "dropHint": "Click to browse or drag a .csv / .xlsx file here",
     "rowsFound": "{{count}} row(s) detected",
     "import": "Import {{count}} Devices",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "parseErrorCsv": "Failed to parse CSV file.",
+    "parseErrorExcel": "Failed to parse Excel file.",
+    "importFailed": "Import failed. Please check the file and try again.",
+    "downloadTemplate": "Download CSV Template",
+    "resultsTitle": "Import complete",
+    "created": "Created",
+    "updated": "Updated",
+    "skipped": "Skipped",
+    "dedupeNotice": "Rows matching an existing Serial Number or MAC Address will update that record instead of creating a duplicate."
   },
   "auditLogs": {
     "title": "Audit Logs",
@@ -260,7 +296,9 @@
     "departments": "Departments",
     "locations": "Locations",
     "newDepartmentPlaceholder": "New department…",
-    "newLocationPlaceholder": "New location…"
+    "newLocationPlaceholder": "New location…",
+    "usernameNoSpaces": "Username cannot contain spaces.",
+    "addAdminFailed": "Could not create administrator. Please check the details and try again."
   },
   "deviceType": {
     "Laptop": "Laptop",

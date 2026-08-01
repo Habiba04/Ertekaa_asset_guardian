@@ -17,7 +17,9 @@
     "restrictedTitle": "وصول مقيّد.",
     "restrictedBody": "هذا النظام مخصص لموظفي تقنية المعلومات المصرح لهم فقط. يتم تسجيل ومراقبة جميع الجلسات.",
     "footer": "أسِت جارديان الإصدار 2.1.4 · © 2025 Corp IT",
-    "invalidCredentials": "اسم المستخدم أو كلمة المرور غير صحيحة."
+    "invalidCredentials": "اسم المستخدم أو كلمة المرور غير صحيحة.",
+    "forgotPasswordTitle": "نسيت كلمة المرور؟",
+    "forgotPasswordBody": "لا يرسل Asset Guardian رسائل إعادة تعيين كلمة المرور عبر البريد الإلكتروني. تواصل مع مسؤول رئيسي في مؤسستك — يمكنه إعادة تعيين كلمة مرورك من الإعدادات ← حسابات مسؤولي تقنية المعلومات."
   },
   "setup": {
     "title": "إنشاء حساب المسؤول الرئيسي",
@@ -29,7 +31,8 @@
     "confirmPassword": "تأكيد كلمة المرور",
     "createAccount": "إنشاء حساب المسؤول الرئيسي",
     "passwordMismatch": "كلمتا المرور غير متطابقتين.",
-    "passwordTooShort": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل."
+    "passwordTooShort": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.",
+    "usernameNoSpaces": "لا يمكن أن يحتوي اسم المستخدم على مسافات."
   },
   "sidebar": {
     "groupMain": "الرئيسية",
@@ -124,7 +127,9 @@
     "syncToastAll": "اكتملت المزامنة الكاملة.",
     "statusOnline": "متصل",
     "statusRemote": "عن بُعد",
-    "statusRogue": "غير موثوق"
+    "statusRogue": "غير موثوق",
+    "allDeviceTypes": "جميع أنواع الأجهزة",
+    "importToast": "تم إنشاء {{created}}، وتحديث {{updated}}، وتخطي {{skipped}}."
   },
   "drawer": {
     "tabHardware": "الأجهزة",
@@ -159,7 +164,16 @@
     "changesSaved": "تم حفظ التغييرات",
     "deviceHistory": "سجل الجهاز",
     "recordedEvents": "{{count}} حدث مسجّل لهذا الجهاز",
-    "noActivity": "لا يوجد نشاط مسجّل لهذا الجهاز."
+    "noActivity": "لا يوجد نشاط مسجّل لهذا الجهاز.",
+    "diskStorage": "سعة التخزين",
+    "macFormatError": "يجب أن يتبع عنوان MAC الصيغة AA:BB:CC:DD:EE:FF.",
+    "editingLockNotice": "وضع التحرير — النقر خارج النافذة معطّل حتى الحفظ أو الإلغاء.",
+    "installedApps": "التطبيقات المثبتة",
+    "noInstalledApps": "لا توجد بيانات تطبيقات مثبتة مسجلة لهذا الجهاز.",
+    "pingDevice": "اختبار الاتصال (Ping)",
+    "pinging": "جارٍ الاختبار…",
+    "pingReachable": "متصل ({{ms}} ميلي ثانية)",
+    "pingUnreachable": "غير متصل"
   },
   "addAssetModal": {
     "title": "إضافة أصل جديد يدوياً",
@@ -187,7 +201,20 @@
     "macRequired": "عنوان MAC مطلوب",
     "ownerRequired": "اسم المالك مطلوب",
     "departmentRequired": "القسم مطلوب",
-    "locationRequired": "الموقع مطلوب"
+    "locationRequired": "الموقع مطلوب",
+    "macFormatError": "يجب أن يتبع عنوان MAC الصيغة AA:BB:CC:DD:EE:FF.",
+    "hostnamePreviewPending": "اختر الموقع والقسم لمعاينة الاسم",
+    "hostNamePreview": "اسم المضيف (يُنشأ تلقائيًا)",
+    "oldHostName": "اسم المضيف القديم",
+    "manufacturer": "الشركة المصنّعة",
+    "model": "الطراز",
+    "processor": "المعالج",
+    "operatingSystem": "نظام التشغيل",
+    "memory": "الذاكرة (RAM)",
+    "diskStorage": "سعة التخزين",
+    "ipAddress": "عنوان IP",
+    "lastUser": "آخر مستخدم مسجّل",
+    "maintenanceDate": "تاريخ آخر صيانة"
   },
   "importModal": {
     "title": "استيراد الأجهزة من ملف",
@@ -195,7 +222,16 @@
     "dropHint": "انقر للتصفح أو اسحب ملف .csv / .xlsx هنا",
     "rowsFound": "تم اكتشاف {{count}} صف",
     "import": "استيراد {{count}} جهاز",
-    "cancel": "إلغاء"
+    "cancel": "إلغاء",
+    "parseErrorCsv": "فشل تحليل ملف CSV.",
+    "parseErrorExcel": "فشل تحليل ملف Excel.",
+    "importFailed": "فشل الاستيراد. يرجى التحقق من الملف والمحاولة مرة أخرى.",
+    "downloadTemplate": "تنزيل قالب CSV",
+    "resultsTitle": "اكتمل الاستيراد",
+    "created": "تم الإنشاء",
+    "updated": "تم التحديث",
+    "skipped": "تم التخطي",
+    "dedupeNotice": "الصفوف المطابقة لرقم تسلسلي أو عنوان MAC موجود مسبقًا ستُحدّث ذلك السجل بدلاً من إنشاء نسخة مكررة."
   },
   "auditLogs": {
     "title": "سجلات التدقيق",
@@ -260,7 +296,9 @@
     "departments": "الأقسام",
     "locations": "المواقع",
     "newDepartmentPlaceholder": "قسم جديد…",
-    "newLocationPlaceholder": "موقع جديد…"
+    "newLocationPlaceholder": "موقع جديد…",
+    "usernameNoSpaces": "لا يمكن أن يحتوي اسم المستخدم على مسافات.",
+    "addAdminFailed": "تعذر إنشاء المسؤول. يرجى التحقق من البيانات والمحاولة مرة أخرى."
   },
   "deviceType": {
     "Laptop": "حاسوب محمول",

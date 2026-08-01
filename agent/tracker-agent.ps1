@@ -63,6 +63,47 @@ function Get-DeviceTypeGuess {
     }
 }
 
+function Get-TotalDiskStorageGB {
+    try {
+        $disks = Get-CimInstance -ClassName Win32_DiskDrive
+        $totalBytes = ($disks | Measure-Object -Property Size -Sum).Sum
+        return [Math]::Round(($totalBytes / 1GB), 0)
+    } catch {
+        Write-AgentLog "Failed to read disk storage: $($_.Exception.Message)"
+        return 0
+    }
+}
+
+function Get-InstalledApplications {
+    # Reads the standard Windows Uninstall registry locations rather than
+    # the Win32_Product WMI class, which is deliberately avoided here: it
+    # is known to silently trigger MSI package reconfiguration/repair on
+    # every query, causing slowdowns and unintended side effects.
+    $uninstallPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+
+    try {
+        $apps = Get-ItemProperty -Path $uninstallPaths -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.DisplayName -and
+                -not $_.SystemComponent -and
+                -not $_.ParentKeyName -and
+                $_.DisplayName -notmatch "Update for|Security Update|Hotfix"
+            } |
+            Select-Object @{Name = "name"; Expression = { $_.DisplayName } },
+                          @{Name = "version"; Expression = { $_.DisplayVersion } } |
+            Sort-Object name -Unique
+
+        return @($apps)
+    } catch {
+        Write-AgentLog "Failed to read installed applications: $($_.Exception.Message)"
+        return @()
+    }
+}
+
 try {
     Write-AgentLog "Tracker agent run started (v$AgentVersion)."
 
@@ -73,6 +114,8 @@ try {
     $physicalMemory = Get-CimInstance -ClassName Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum
 
     $totalMemoryGB = [Math]::Round(($physicalMemory.Sum / 1GB), 0)
+    $totalDiskGB = Get-TotalDiskStorageGB
+    $installedApps = Get-InstalledApplications
 
     $payload = @{
         hostName         = $env:COMPUTERNAME
@@ -82,7 +125,9 @@ try {
         manufacturer     = $computerSystem.Manufacturer
         model            = $computerSystem.Model
         processor        = $processor.Name
-        memory           = "$totalMemoryGB GB"
+        memory           = $totalMemoryGB
+        diskStorageGB    = $totalDiskGB
+        installedApps    = $installedApps
         operatingSystem  = "$($os.Caption) $($os.Version)"
         deviceType       = Get-DeviceTypeGuess
         agentVersion     = $AgentVersion

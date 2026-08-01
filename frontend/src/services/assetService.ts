@@ -1,10 +1,11 @@
 import apiClient from './apiClient'
-import type { Asset, NewAssetForm, AuditLogEntry } from '../types'
+import type { Asset, NewAssetForm, AuditLogEntry, PingResult } from '../types'
 
 export interface ListAssetsParams {
   search?: string
   department?: string
   location?: string
+  deviceType?: string
 }
 
 export interface ListAssetsResponse {
@@ -12,6 +13,14 @@ export interface ListAssetsResponse {
   total: number
   page: number
   pageSize: number
+}
+
+export interface BulkImportResponse {
+  message: string
+  assets: Asset[]
+  created: number
+  updated: number
+  skipped: Array<{ row: Record<string, unknown>; reason: string }>
 }
 
 export const assetService = {
@@ -30,7 +39,7 @@ export const assetService = {
     return data
   },
 
-  async create(payload: NewAssetForm): Promise<{ asset: Asset }> {
+  async create(payload: Partial<NewAssetForm>): Promise<{ asset: Asset }> {
     const { data } = await apiClient.post('/assets', payload)
     return data
   },
@@ -55,8 +64,13 @@ export const assetService = {
     return data
   },
 
-  async bulkImport(rows: Record<string, unknown>[]): Promise<{ message: string; assets: Asset[] }> {
+  async bulkImport(rows: Record<string, unknown>[]): Promise<BulkImportResponse> {
     const { data } = await apiClient.post('/assets/import', { rows })
+    return data
+  },
+
+  async ping(id: string): Promise<PingResult> {
+    const { data } = await apiClient.get(`/assets/${id}/ping`)
     return data
   },
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DeviceType, DropdownState, NewAssetForm, Asset } from '../types'
 import { assetService } from '../services/assetService'
@@ -8,15 +8,29 @@ import Portal from './Portal'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 
 const DEVICE_TYPES: DeviceType[] = ['Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router', 'Other']
+const MAC_ADDRESS_REGEX = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/
+
+function slugify(value: string): string {
+  return (value || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+}
 
 const EMPTY_FORM: NewAssetForm = {
-  hostName: '',
+  oldHostName: '',
+  ipAddress: '',
   deviceType: 'Laptop',
+  manufacturer: '',
+  model: '',
+  processor: '',
+  memory: '',
+  diskStorageGB: '',
+  operatingSystem: '',
   serialNumber: '',
   macAddress: '',
   owner: '',
+  lastUser: '',
   department: '',
   location: '',
+  lastMaintenanceDate: '',
   notes: '',
 }
 
@@ -42,9 +56,9 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
 
   const validate = (): boolean => {
     const next: Partial<Record<keyof NewAssetForm, string>> = {}
-    if (!form.hostName.trim()) next.hostName = t('addAssetModal.hostNameRequired')
     if (!form.serialNumber.trim()) next.serialNumber = t('addAssetModal.serialRequired')
     if (!form.macAddress.trim()) next.macAddress = t('addAssetModal.macRequired')
+    else if (!MAC_ADDRESS_REGEX.test(form.macAddress.trim())) next.macAddress = t('addAssetModal.macFormatError')
     if (!form.owner.trim()) next.owner = t('addAssetModal.ownerRequired')
     if (!form.department.trim()) next.department = t('addAssetModal.departmentRequired')
     if (!form.location.trim()) next.location = t('addAssetModal.locationRequired')
@@ -56,7 +70,12 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
     if (!validate()) return
     setSubmitting(true)
     try {
-      const { asset } = await assetService.create(form)
+      const payload = {
+        ...form,
+        memory: form.memory ? String(form.memory) : undefined,
+        diskStorageGB: form.diskStorageGB ? String(form.diskStorageGB) : undefined,
+      }
+      const { asset } = await assetService.create(payload)
       setSuccessAsset(asset)
       onCreated(asset)
     } finally {
@@ -65,6 +84,14 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
   }
 
   const achievedByPreview = `${user?.fullName ?? ''} (${t('dataSource.Manual')})`
+
+  const hostnamePreview = useMemo(() => {
+    const loc = slugify(form.location)
+    const dept = slugify(form.department)
+    const type = slugify(form.deviceType)
+    if (!loc || !dept) return t('addAssetModal.hostnamePreviewPending')
+    return `${loc}${dept}-${type}###`
+  }, [form.location, form.department, form.deviceType, t])
 
   return (
     <Portal>
@@ -84,7 +111,7 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
         style={{
           backgroundColor: 'var(--bg-surface)',
           borderRadius: 12,
-          width: 560,
+          width: 640,
           maxWidth: '100%',
           maxHeight: '90vh',
           display: 'flex',
@@ -131,12 +158,19 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
                   </div>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)' }}>{achievedByPreview}</div>
                 </div>
+                <div>
+                  <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                    {t('addAssetModal.hostNamePreview')}
+                  </div>
+                  <div className="ltr-always" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    {hostnamePreview}
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.hostName')}</label>
-                <input className="input-base" value={form.hostName} onChange={(e) => update('hostName', e.target.value)} />
-                {errors.hostName && <span style={{ fontSize: 11, color: '#cf222e' }}>{errors.hostName}</span>}
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.oldHostName')}</label>
+                <input className="input-base" value={form.oldHostName} onChange={(e) => update('oldHostName', e.target.value)} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -151,6 +185,42 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.manufacturer')}</label>
+                <input className="input-base" value={form.manufacturer} onChange={(e) => update('manufacturer', e.target.value)} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.model')}</label>
+                <input className="input-base" value={form.model} onChange={(e) => update('model', e.target.value)} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.processor')}</label>
+                <input className="input-base" value={form.processor} onChange={(e) => update('processor', e.target.value)} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.operatingSystem')}</label>
+                <input className="input-base" value={form.operatingSystem} onChange={(e) => update('operatingSystem', e.target.value)} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.memory')}</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input type="number" min="0" className="input-base" value={form.memory} onChange={(e) => update('memory', e.target.value)} />
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0 }}>GB</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.diskStorage')}</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input type="number" min="0" className="input-base" value={form.diskStorageGB} onChange={(e) => update('diskStorageGB', e.target.value)} />
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', flexShrink: 0 }}>GB</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.serialNumber')}</label>
                 <input className="input-base" value={form.serialNumber} onChange={(e) => update('serialNumber', e.target.value)} />
                 {errors.serialNumber && <span style={{ fontSize: 11, color: '#cf222e' }}>{errors.serialNumber}</span>}
@@ -158,14 +228,24 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.macAddress')}</label>
-                <input className="input-base ltr-always" value={form.macAddress} onChange={(e) => update('macAddress', e.target.value)} placeholder="00:1A:2B:3C:4D:5E" />
+                <input className="input-base ltr-always" value={form.macAddress} onChange={(e) => update('macAddress', e.target.value)} placeholder="AA:BB:CC:DD:EE:FF" />
                 {errors.macAddress && <span style={{ fontSize: 11, color: '#cf222e' }}>{errors.macAddress}</span>}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.ipAddress')}</label>
+                <input className="input-base ltr-always" value={form.ipAddress} onChange={(e) => update('ipAddress', e.target.value)} placeholder="192.168.1.10" />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.currentOwner')}</label>
                 <input className="input-base" value={form.owner} onChange={(e) => update('owner', e.target.value)} />
                 {errors.owner && <span style={{ fontSize: 11, color: '#cf222e' }}>{errors.owner}</span>}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.lastUser')}</label>
+                <input className="input-base" value={form.lastUser} onChange={(e) => update('lastUser', e.target.value)} />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -192,6 +272,11 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
                   ))}
                 </select>
                 {errors.location && <span style={{ fontSize: 11, color: '#cf222e' }}>{errors.location}</span>}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.maintenanceDate')}</label>
+                <input type="date" className="input-base" value={form.lastMaintenanceDate} onChange={(e) => update('lastMaintenanceDate', e.target.value)} />
               </div>
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 5 }}>

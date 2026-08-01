@@ -9,7 +9,7 @@ async function stageDevice(req, res, next) {
   try {
     const {
       hostName, ipAddress, serialNumber, macAddress, processor,
-      memory, operatingSystem, manufacturer, model, deviceType,
+      memory, diskStorageGB, installedApps, operatingSystem, manufacturer, model, deviceType,
     } = req.body;
 
     if (!hostName || !macAddress) {
@@ -23,7 +23,7 @@ async function stageDevice(req, res, next) {
 
     if (staging) {
       Object.assign(staging, {
-        hostName, ipAddress, serialNumber, processor, memory,
+        hostName, ipAddress, serialNumber, processor, memory, diskStorageGB, installedApps,
         operatingSystem, manufacturer, model,
         deviceType: deviceType || staging.deviceType,
         submittedAt: new Date(),
@@ -32,7 +32,7 @@ async function stageDevice(req, res, next) {
       await staging.save();
     } else {
       staging = await StagingDevice.create({
-        hostName, ipAddress, serialNumber, macAddress, processor, memory,
+        hostName, ipAddress, serialNumber, macAddress, processor, memory, diskStorageGB, installedApps,
         operatingSystem, manufacturer, model,
         deviceType: deviceType || 'PC',
         rawPayload: req.body,
@@ -40,16 +40,7 @@ async function stageDevice(req, res, next) {
       });
     }
 
-    await AuditLog.create({
-      deviceId: null,
-      hostname: hostName,
-      eventType: 'Agent Sync',
-      eventCategory: 'checkin',
-      userSource: 'Guardian Agent',
-      changeSummary: `Telemetry received and staged for review (MAC ${macAddress}).`,
-    });
-
-    res.status(202).json({ message: 'Telemetry staged for admin review.', stagingId: staging.id });
+    res.json({ staging });
   } catch (err) {
     next(err);
   }
@@ -104,6 +95,8 @@ async function approveStagedDevice(req, res, next) {
       model: staging.model,
       processor: staging.processor,
       memory: staging.memory,
+      diskStorageGB: staging.diskStorageGB,
+      installedApps: staging.installedApps,
       operatingSystem: staging.operatingSystem,
       serialNumber: staging.serialNumber || `PENDING-${staging.id.slice(0, 8)}`,
       macAddress: staging.macAddress,
