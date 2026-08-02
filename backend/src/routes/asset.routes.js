@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-  listAssets, getAsset, getAssetActivity, createAsset, updateAsset,
+  listAssets, getAsset, pingAsset, getAssetActivity, createAsset, updateAsset,
   deleteAsset, bulkDeleteAssets, syncAssets, bulkImportAssets,
 } = require('../controllers/asset.controller');
 const { requireAuth, blockReadOnly } = require('../middlewares/auth.middleware');
@@ -20,5 +20,7 @@ router.post('/bulk-delete', blockReadOnly, bulkDeleteAssets);
 
 router.patch('/:id', blockReadOnly, updateAsset);
 router.delete('/:id', blockReadOnly, deleteAsset);
+
+router.get('/:id/ping', pingAsset);
 
 module.exports = router;

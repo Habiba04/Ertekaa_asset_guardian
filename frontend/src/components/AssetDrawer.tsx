@@ -370,9 +370,9 @@ export default function AssetDrawer({ asset, dropdowns, onClose, onUpdated }: As
 
             <div style={{ marginTop: 22 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                {t('drawer.installedApps')} {form.installedApps && form.installedApps.length > 0 && `(${form.installedApps.length})`}
+                {t('drawer.installedApps')} {Array.isArray(form.installedApps) && form.installedApps.length > 0 && `(${form.installedApps.length})`}
               </div>
-              {!form.installedApps || form.installedApps.length === 0 ? (
+              {!Array.isArray(form.installedApps) || form.installedApps.length === 0 ? (
                 <div style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>{t('drawer.noInstalledApps')}</div>
               ) : (
                 <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--border-faint)', borderRadius: 8 }}>
@@ -396,7 +396,7 @@ export default function AssetDrawer({ asset, dropdowns, onClose, onUpdated }: As
             </div>
             </>
           )}
-
+          
           {tab === 'admin' && (
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
               <Field label={t('drawer.currentOwner')}>

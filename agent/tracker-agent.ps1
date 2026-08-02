@@ -75,32 +75,48 @@ function Get-TotalDiskStorageGB {
 }
 
 function Get-InstalledApplications {
-    # Reads the standard Windows Uninstall registry locations rather than
-    # the Win32_Product WMI class, which is deliberately avoided here: it
-    # is known to silently trigger MSI package reconfiguration/repair on
-    # every query, causing slowdowns and unintended side effects.
     $uninstallPaths = @(
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
-        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*",
-        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*"
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
     )
 
-    try {
-        $apps = Get-ItemProperty -Path $uninstallPaths -ErrorAction SilentlyContinue |
-            Where-Object {
-                $_.DisplayName -and
-                -not $_.SystemComponent -and
-                -not $_.ParentKeyName -and
-                $_.DisplayName -notmatch "Update for|Security Update|Hotfix"
-            } |
-            Select-Object @{Name = "name"; Expression = { $_.DisplayName } },
-                          @{Name = "version"; Expression = { $_.DisplayVersion } } |
-            Sort-Object name -Unique
+    $apps = @()
 
-        return @($apps)
+    foreach ($basePath in $uninstallPaths) {
+        if (-not (Test-Path $basePath)) { continue }
+
+        $subKeys = Get-ChildItem -Path $basePath -ErrorAction SilentlyContinue
+        foreach ($key in $subKeys) {
+            try {
+                $displayName = $key.GetValue("DisplayName")
+                if ([string]::IsNullOrWhiteSpace($displayName)) { continue }
+
+                $systemComponent = $key.GetValue("SystemComponent")
+                if ($systemComponent -eq 1) { continue }
+
+                $parentKeyName = $key.GetValue("ParentKeyName")
+                if ($parentKeyName) { continue }
+
+                if ($displayName -match "Update for|Security Update|Hotfix") { continue }
+
+                $displayVersion = $key.GetValue("DisplayVersion")
+
+                $apps += [PSCustomObject]@{
+                    name    = [string]$displayName
+                    version = if ($displayVersion) { [string]$displayVersion } else { $null }
+                }
+            } catch {
+                continue
+            }
+        }
+    }
+
+    try {
+        return @($apps | Sort-Object name -Unique)
     } catch {
-        Write-AgentLog "Failed to read installed applications: $($_.Exception.Message)"
-        return @()
+        Write-AgentLog "Failed to sort installed applications list: $($_.Exception.Message)"
+        return @($apps)
     }
 }
 
@@ -116,6 +132,7 @@ try {
     $totalMemoryGB = [Math]::Round(($physicalMemory.Sum / 1GB), 0)
     $totalDiskGB = Get-TotalDiskStorageGB
     $installedApps = Get-InstalledApplications
+    Write-AgentLog "DEBUG: installedApps count = $($installedApps.Count)"
 
     $payload = @{
         hostName         = $env:COMPUTERNAME

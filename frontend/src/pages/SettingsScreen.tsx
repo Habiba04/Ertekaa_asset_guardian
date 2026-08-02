@@ -157,9 +157,11 @@ export default function SettingsScreen() {
               <button type="button" className="btn-ghost" onClick={() => { setShowAddAdmin(false); setAddAdminError('') }}>
                 {t('settings.cancel')}
               </button>
-              <button type="button" className="btn-primary" onClick={handleAddAdmin}>
-                {t('settings.addAdministrator')}
-              </button>
+              {(currentUser?.role !== 'IT_ADMIN' &&
+                <button type="button" className="btn-primary" onClick={handleAddAdmin}>
+                  {t('settings.addAdministrator')}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -171,7 +173,9 @@ export default function SettingsScreen() {
                 <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('settings.fullName')}</th>
                 <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('settings.email')}</th>
                 <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('settings.role')}</th>
-                <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('common.actions')}</th>
+                {(currentUser?.role !== 'IT_ADMIN' &&
+                  <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('common.actions')}</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -197,19 +201,19 @@ export default function SettingsScreen() {
                       {currentUser?.role === 'SUPER_ADMIN' && (
                         <button type="button" className="btn-ghost" style={{ padding: '4px 8px', fontSize: 11.5 }} onClick={() => setResettingAdmin(admin)}>
                           <IconKey size={11} /> {t('settings.resetPassword')}
-                      </button>
-                    )}
-                    {currentUser?.role === 'SUPER_ADMIN' && admin.id !== currentUser.id && (
-                      <button type="button" className="btn-danger" onClick={() => setRevokingAdmin(admin)}>
-                        <IconTrash size={11} /> {t('settings.remove')}
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                        </button>
+                      )}
+                      {currentUser?.role === 'SUPER_ADMIN' && admin.id !== currentUser.id && (
+                        <button type="button" className="btn-danger" onClick={() => setRevokingAdmin(admin)}>
+                          <IconTrash size={11} /> {t('settings.remove')}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

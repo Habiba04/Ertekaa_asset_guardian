@@ -17,7 +17,7 @@ const DEVICE_TYPES: DeviceType[] = ['Laptop', 'PC', 'Switch', 'Server', 'Printer
 
 export default function InventoryScreen() {
   const { t } = useTranslation()
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const [assets, setAssets] = useState<Asset[]>([])
   const [dropdowns, setDropdowns] = useState<DropdownState>(EMPTY_DROPDOWNS)
   const [loading, setLoading] = useState(true)
@@ -228,9 +228,11 @@ export default function InventoryScreen() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 920 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-elevated)' }}>
-                <th style={{ padding: '10px 14px', textAlign: 'start', width: 36 }}>
-                  <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleSelectAll} />
-                </th>
+                {user?.role !== 'READ_ONLY_AUDITOR' && (
+                  <th style={{ padding: '10px 14px', textAlign: 'start', width: 36 }}>
+                    <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleSelectAll} />
+                  </th>
+                )}
                 <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colHostName')}</th>
                 <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colType')}</th>
                 <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colManufacturer')}</th>
@@ -264,9 +266,11 @@ export default function InventoryScreen() {
                     style={{ borderBottom: '1px solid var(--border-faint)' }}
                     onClick={() => setSelectedAsset(asset)}
                   >
-                    <td style={{ padding: '10px 14px' }} onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" checked={selectedIds.has(asset.id)} onChange={() => toggleSelect(asset.id)} />
-                    </td>
+                    {(user?.role !== 'READ_ONLY_AUDITOR' &&
+                      <td style={{ padding: '10px 14px' }} onClick={(e) => e.stopPropagation()}>
+                        <input type="checkbox" checked={selectedIds.has(asset.id)} onChange={() => toggleSelect(asset.id)} />
+                      </td>
+                    )}
                     <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>{asset.hostName}</td>
                     <td style={{ padding: '10px 14px' }}>
                       <DeviceTypeBadge type={asset.deviceType} />

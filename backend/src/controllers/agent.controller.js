@@ -1,6 +1,21 @@
 const { StagingDevice, Device, AuditLog } = require('../models');
 
 /**
+ * Guarantees installedApps is always persisted as a proper array of
+ * {name, version} objects, regardless of what shape the agent payload
+ * arrives in. PowerShell's ConvertTo-Json can serialize an empty
+ * collection as `{}` instead of `[]` depending on how it was produced,
+ * which would otherwise get stored as a non-array object and crash the
+ * frontend (Array.prototype.map does not exist on a plain object).
+ */
+function normalizeInstalledApps(value) {
+  if (Array.isArray(value)) {
+    return value.filter((item) => item && typeof item === 'object' && item.name);
+  }
+  return [];
+}
+
+/**
  * POST /api/agent/stage
  * Called by tracker-agent.ps1. Authenticated via the shared static
  * agent API key (see agentAuth.middleware.js), not a user JWT.
@@ -16,6 +31,8 @@ async function stageDevice(req, res, next) {
       return res.status(422).json({ message: 'hostName and macAddress are required fields from the agent payload.' });
     }
 
+    const safeInstalledApps = normalizeInstalledApps(installedApps);
+
     // If this MAC already has a pending record, refresh it instead of duplicating.
     let staging = await StagingDevice.findOne({
       where: { macAddress, status: 'PENDING_REVIEW' },
@@ -23,7 +40,8 @@ async function stageDevice(req, res, next) {
 
     if (staging) {
       Object.assign(staging, {
-        hostName, ipAddress, serialNumber, processor, memory, diskStorageGB, installedApps,
+        hostName, ipAddress, serialNumber, processor, memory, diskStorageGB,
+        installedApps: safeInstalledApps,
         operatingSystem, manufacturer, model,
         deviceType: deviceType || staging.deviceType,
         submittedAt: new Date(),
@@ -32,7 +50,8 @@ async function stageDevice(req, res, next) {
       await staging.save();
     } else {
       staging = await StagingDevice.create({
-        hostName, ipAddress, serialNumber, macAddress, processor, memory, diskStorageGB, installedApps,
+        hostName, ipAddress, serialNumber, macAddress, processor, memory, diskStorageGB,
+        installedApps: safeInstalledApps,
         operatingSystem, manufacturer, model,
         deviceType: deviceType || 'PC',
         rawPayload: req.body,
@@ -40,7 +59,16 @@ async function stageDevice(req, res, next) {
       });
     }
 
-    res.json({ staging });
+    await AuditLog.create({
+      deviceId: null,
+      hostname: hostName,
+      eventType: 'Agent Sync',
+      eventCategory: 'checkin',
+      userSource: 'Guardian Agent',
+      changeSummary: `Telemetry received and staged for review (MAC ${macAddress}).`,
+    });
+
+    res.status(202).json({ message: 'Telemetry staged for admin review.', stagingId: staging.id });
   } catch (err) {
     next(err);
   }
@@ -96,7 +124,7 @@ async function approveStagedDevice(req, res, next) {
       processor: staging.processor,
       memory: staging.memory,
       diskStorageGB: staging.diskStorageGB,
-      installedApps: staging.installedApps,
+      installedApps: normalizeInstalledApps(staging.installedApps),
       operatingSystem: staging.operatingSystem,
       serialNumber: staging.serialNumber || `PENDING-${staging.id.slice(0, 8)}`,
       macAddress: staging.macAddress,
