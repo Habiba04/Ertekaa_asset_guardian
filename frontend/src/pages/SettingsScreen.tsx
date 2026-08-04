@@ -49,10 +49,24 @@ export default function SettingsScreen() {
     loadAll()
   }, [])
 
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
   const handleAddAdmin = async () => {
     setAddAdminError('')
+    if (!newAdmin.fullName.trim() || !newAdmin.email.trim() || !newAdmin.username.trim() || !newAdmin.password) {
+      setAddAdminError(t('settings.allFieldsRequired'))
+      return
+    }
     if (/\s/.test(newAdmin.username)) {
       setAddAdminError(t('settings.usernameNoSpaces'))
+      return
+    }
+    if (!EMAIL_REGEX.test(newAdmin.email.trim())) {
+      setAddAdminError(t('settings.emailInvalid'))
+      return
+    }
+    if (newAdmin.password.length < 8) {
+      setAddAdminError(t('settings.passwordTooShort'))
       return
     }
     try {
@@ -142,7 +156,7 @@ export default function SettingsScreen() {
         {showAddAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : 'repeat(5, 1fr)', gap: 10, marginBottom: 14, padding: 14, backgroundColor: 'var(--bg-elevated)', borderRadius: 8 }}>
             <input className="input-base" placeholder={t('settings.fullName') ?? ''} value={newAdmin.fullName} onChange={(e) => setNewAdmin((p) => ({ ...p, fullName: e.target.value }))} />
-            <input className="input-base" placeholder={t('settings.email') ?? ''} value={newAdmin.email} onChange={(e) => setNewAdmin((p) => ({ ...p, email: e.target.value }))} />
+            <input className="input-base" type="email" placeholder={t('settings.email') ?? ''} value={newAdmin.email} onChange={(e) => setNewAdmin((p) => ({ ...p, email: e.target.value }))} />
             <input className="input-base" placeholder={t('settings.username') ?? ''} value={newAdmin.username} onChange={(e) => setNewAdmin((p) => ({ ...p, username: e.target.value.replace(/\s/g, '') }))} />
             <input className="input-base" type="password" placeholder={t('settings.password') ?? ''} value={newAdmin.password} onChange={(e) => setNewAdmin((p) => ({ ...p, password: e.target.value }))} />
             <select className="input-base" value={newAdmin.role} onChange={(e) => setNewAdmin((p) => ({ ...p, role: e.target.value as UserRole }))}>

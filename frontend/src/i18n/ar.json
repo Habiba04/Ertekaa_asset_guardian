@@ -214,7 +214,9 @@
     "diskStorage": "سعة التخزين",
     "ipAddress": "عنوان IP",
     "lastUser": "آخر مستخدم مسجّل",
-    "maintenanceDate": "تاريخ آخر صيانة"
+    "maintenanceDate": "تاريخ آخر صيانة",
+    "genericError": "حدث خطأ أثناء إنشاء هذا الجهاز. يرجى المحاولة مرة أخرى.",
+    "duplicateError": "يوجد بالفعل جهاز بنفس الرقم التسلسلي أو عنوان MAC في المخزون."
   },
   "importModal": {
     "title": "استيراد الأجهزة من ملف",
@@ -298,7 +300,10 @@
     "newDepartmentPlaceholder": "قسم جديد…",
     "newLocationPlaceholder": "موقع جديد…",
     "usernameNoSpaces": "لا يمكن أن يحتوي اسم المستخدم على مسافات.",
-    "addAdminFailed": "تعذر إنشاء المسؤول. يرجى التحقق من البيانات والمحاولة مرة أخرى."
+    "addAdminFailed": "تعذر إنشاء المسؤول. يرجى التحقق من البيانات والمحاولة مرة أخرى.",
+    "allFieldsRequired": "جميع الحقول مطلوبة.",
+    "emailInvalid": "يرجى إدخال بريد إلكتروني صالح (مثال: name@company.com).",
+    "passwordTooShort": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل."
   },
   "deviceType": {
     "Laptop": "حاسوب محمول",

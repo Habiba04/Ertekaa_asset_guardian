@@ -214,7 +214,9 @@
     "diskStorage": "Disk Storage",
     "ipAddress": "IP Address",
     "lastUser": "Last Logged User",
-    "maintenanceDate": "Last Maintenance Date"
+    "maintenanceDate": "Last Maintenance Date",
+    "genericError": "Something went wrong while creating this asset. Please try again.",
+    "duplicateError": "A device with this Serial Number or MAC Address already exists in the inventory."
   },
   "importModal": {
     "title": "Import Devices from File",
@@ -298,7 +300,10 @@
     "newDepartmentPlaceholder": "New department…",
     "newLocationPlaceholder": "New location…",
     "usernameNoSpaces": "Username cannot contain spaces.",
-    "addAdminFailed": "Could not create administrator. Please check the details and try again."
+    "addAdminFailed": "Could not create administrator. Please check the details and try again.",
+    "allFieldsRequired": "All fields are required.",
+    "emailInvalid": "Please enter a valid email address (e.g. name@company.com).",
+    "passwordTooShort": "Password must be at least 8 characters long."
   },
   "deviceType": {
     "Laptop": "Laptop",

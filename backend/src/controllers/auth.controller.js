@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User, AuditLog } = require('../models');
 
 function signToken(user) {
   return jwt.sign({ sub: user.id, role: user.role }, process.env.JWT_SECRET, {
@@ -51,11 +51,22 @@ async function listAdmins(req, res, next) {
   }
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 async function createAdmin(req, res, next) {
   try {
     const { fullName, email, username, password, role } = req.body;
     if (!fullName || !email || !username || !password) {
-      return res.status(422).json({ message: 'fullName, email, username and password are required.' });
+      return res.status(422).json({ message: 'Full name, email, username and password are all required.' });
+    }
+    if (/\s/.test(username)) {
+      return res.status(422).json({ message: 'Username cannot contain spaces.' });
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(422).json({ message: 'Please enter a valid email address (e.g. name@company.com).' });
+    }
+    if (password.length < 8) {
+      return res.status(422).json({ message: 'Password must be at least 8 characters long.' });
     }
     const passwordHash = await bcrypt.hash(password, 12);
     const admin = await User.create({

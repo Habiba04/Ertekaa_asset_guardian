@@ -1,4 +1,5 @@
 const { StagingDevice, Device, AuditLog } = require('../models');
+const { generateHostname } = require('./asset.controller');
 
 /**
  * Guarantees installedApps is always persisted as a proper array of
@@ -115,8 +116,11 @@ async function approveStagedDevice(req, res, next) {
       return res.status(422).json({ message: 'owner, department, and location are required to approve a device.' });
     }
 
+    const generatedHostName = await generateHostname(location, department, staging.deviceType);
+
     const device = await Device.create({
-      hostName: staging.hostName,
+      oldHostName: staging.hostName,
+      hostName: generatedHostName,
       ipAddress: staging.ipAddress,
       deviceType: staging.deviceType,
       manufacturer: staging.manufacturer,
