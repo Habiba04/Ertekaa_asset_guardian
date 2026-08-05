@@ -23,6 +23,7 @@ export default function SettingsScreen() {
   const [counts, setCounts] = useState<StagingCounts>({ enrolled: 0, pending: 0, failed: 0 })
   const [showAddAdmin, setShowAddAdmin] = useState(false)
   const [newAdmin, setNewAdmin] = useState({ fullName: '', email: '', username: '', password: '', role: 'IT_ADMIN' as UserRole })
+  const [addAdminError, setAddAdminError] = useState('')
   const [newDept, setNewDept] = useState('')
   const [newLoc, setNewLoc] = useState('')
   const [copied, setCopied] = useState(false)
@@ -48,11 +49,35 @@ export default function SettingsScreen() {
     loadAll()
   }, [])
 
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
   const handleAddAdmin = async () => {
-    await authService.createAdmin(newAdmin)
-    setNewAdmin({ fullName: '', email: '', username: '', password: '', role: 'IT_ADMIN' })
-    setShowAddAdmin(false)
-    loadAll()
+    setAddAdminError('')
+    if (!newAdmin.fullName.trim() || !newAdmin.email.trim() || !newAdmin.username.trim() || !newAdmin.password) {
+      setAddAdminError(t('settings.allFieldsRequired'))
+      return
+    }
+    if (/\s/.test(newAdmin.username)) {
+      setAddAdminError(t('settings.usernameNoSpaces'))
+      return
+    }
+    if (!EMAIL_REGEX.test(newAdmin.email.trim())) {
+      setAddAdminError(t('settings.emailInvalid'))
+      return
+    }
+    if (newAdmin.password.length < 8) {
+      setAddAdminError(t('settings.passwordTooShort'))
+      return
+    }
+    try {
+      await authService.createAdmin(newAdmin)
+      setNewAdmin({ fullName: '', email: '', username: '', password: '', role: 'IT_ADMIN' })
+      setShowAddAdmin(false)
+      loadAll()
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setAddAdminError(message || t('settings.addAdminFailed'))
+    }
   }
 
   const handleRoleChange = async (id: string, role: UserRole) => {
@@ -131,8 +156,8 @@ export default function SettingsScreen() {
         {showAddAdmin && (
           <div style={{ display: 'grid', gridTemplateColumns: isTablet ? '1fr' : 'repeat(5, 1fr)', gap: 10, marginBottom: 14, padding: 14, backgroundColor: 'var(--bg-elevated)', borderRadius: 8 }}>
             <input className="input-base" placeholder={t('settings.fullName') ?? ''} value={newAdmin.fullName} onChange={(e) => setNewAdmin((p) => ({ ...p, fullName: e.target.value }))} />
-            <input className="input-base" placeholder={t('settings.email') ?? ''} value={newAdmin.email} onChange={(e) => setNewAdmin((p) => ({ ...p, email: e.target.value }))} />
-            <input className="input-base" placeholder={t('settings.username') ?? ''} value={newAdmin.username} onChange={(e) => setNewAdmin((p) => ({ ...p, username: e.target.value }))} />
+            <input className="input-base" type="email" placeholder={t('settings.email') ?? ''} value={newAdmin.email} onChange={(e) => setNewAdmin((p) => ({ ...p, email: e.target.value }))} />
+            <input className="input-base" placeholder={t('settings.username') ?? ''} value={newAdmin.username} onChange={(e) => setNewAdmin((p) => ({ ...p, username: e.target.value.replace(/\s/g, '') }))} />
             <input className="input-base" type="password" placeholder={t('settings.password') ?? ''} value={newAdmin.password} onChange={(e) => setNewAdmin((p) => ({ ...p, password: e.target.value }))} />
             <select className="input-base" value={newAdmin.role} onChange={(e) => setNewAdmin((p) => ({ ...p, role: e.target.value as UserRole }))}>
               {ROLES.map((r) => (
@@ -141,13 +166,16 @@ export default function SettingsScreen() {
                 </option>
               ))}
             </select>
+            {addAdminError && <div style={{ gridColumn: '1 / -1', fontSize: 11.5, color: '#cf222e' }}>{addAdminError}</div>}
             <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button type="button" className="btn-ghost" onClick={() => setShowAddAdmin(false)}>
+              <button type="button" className="btn-ghost" onClick={() => { setShowAddAdmin(false); setAddAdminError('') }}>
                 {t('settings.cancel')}
               </button>
-              <button type="button" className="btn-primary" onClick={handleAddAdmin}>
-                {t('settings.addAdministrator')}
-              </button>
+              {(currentUser?.role !== 'IT_ADMIN' &&
+                <button type="button" className="btn-primary" onClick={handleAddAdmin}>
+                  {t('settings.addAdministrator')}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -159,7 +187,7 @@ export default function SettingsScreen() {
                 <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('settings.fullName')}</th>
                 <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('settings.email')}</th>
                 <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('settings.role')}</th>
-                {currentUser?.role === 'SUPER_ADMIN' && (
+                {(currentUser?.role !== 'IT_ADMIN' &&
                   <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('common.actions')}</th>
                 )}
               </tr>
@@ -187,19 +215,19 @@ export default function SettingsScreen() {
                       {currentUser?.role === 'SUPER_ADMIN' && (
                         <button type="button" className="btn-ghost" style={{ padding: '4px 8px', fontSize: 11.5 }} onClick={() => setResettingAdmin(admin)}>
                           <IconKey size={11} /> {t('settings.resetPassword')}
-                      </button>
-                    )}
-                    {currentUser?.role === 'SUPER_ADMIN' && admin.id !== currentUser.id && (
-                      <button type="button" className="btn-danger" onClick={() => setRevokingAdmin(admin)}>
-                        <IconTrash size={11} /> {t('settings.remove')}
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                        </button>
+                      )}
+                      {currentUser?.role === 'SUPER_ADMIN' && admin.id !== currentUser.id && (
+                        <button type="button" className="btn-danger" onClick={() => setRevokingAdmin(admin)}>
+                          <IconTrash size={11} /> {t('settings.remove')}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 

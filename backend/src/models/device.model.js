@@ -29,32 +29,36 @@ Device.init(
     // 7. Processor
     processor: { type: DataTypes.STRING(160), allowNull: true, defaultValue: '' },
     // 8. Memory (RAM)
-    memory: { type: DataTypes.STRING(60), allowNull: true, defaultValue: '' },
-    // 9. Operating System
+    memory: { type: DataTypes.INTEGER, allowNull: true },
+    // 9. Disk Storage (GB)
+    diskStorageGB: { type: DataTypes.INTEGER, allowNull: true },
+    // 10. Installed Applications (JSON array)
+    installedApps: { type: DataTypes.JSONB, allowNull: true },
+    // 11. Operating System
     operatingSystem: { type: DataTypes.STRING(80), allowNull: true, defaultValue: '' },
-    // 10. Serial Number
+    // 12. Serial Number
     serialNumber: { type: DataTypes.STRING(120), allowNull: false, unique: true },
-    // 11. MAC Address
+    // 13. MAC Address
     macAddress: { type: DataTypes.STRING(60), allowNull: false, unique: true },
-    // 12. Location
+    // 14. Location
     location: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
-    // 13. Last User
+    // 15. Last User
     lastUser: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
-    // 14. Owner (Current)
+    // 16. Owner (Current)
     owner: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
-    // 15. Description / Department
+    // 17. Description / Department
     department: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
-    // 16. Data Source
+    // 18. Data Source
     dataSource: {
       type: DataTypes.ENUM('Agent', 'Manual', 'CSV Import'),
       allowNull: false,
       defaultValue: 'Manual',
     },
-    // 17. Last Maintenance Date
+    // 19. Last Maintenance Date
     lastMaintenanceDate: { type: DataTypes.DATEONLY, allowNull: true },
-    // 18. Achieved By (visible/populated when Data Source is NOT Agent)
+    // 20. Achieved By (visible/populated when Data Source is NOT Agent)
     achievedBy: { type: DataTypes.STRING(160), allowNull: true, defaultValue: '' },
-    // 19. Notes
+    // 21. Notes
     notes: { type: DataTypes.TEXT, allowNull: true, defaultValue: '' },
 
     // Operational / derived fields

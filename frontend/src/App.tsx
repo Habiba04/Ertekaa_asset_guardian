@@ -75,7 +75,12 @@ function AppRoutes() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardScreen />} />
         <Route path="inventory" element={<InventoryScreen />} />
-        <Route path="staging-queue" element={<StagingQueueScreen />} />
+        <Route
+          path="staging-queue"
+          element={
+            user?.role === 'READ_ONLY_AUDITOR' ? <Navigate to="/dashboard" replace /> : <StagingQueueScreen />
+          }
+        />
         <Route path="audit-logs" element={<AuditLogsScreen />} />
         <Route
           path="settings"

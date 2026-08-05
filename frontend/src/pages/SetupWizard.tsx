@@ -23,6 +23,10 @@ export default function SetupWizard() {
     e.preventDefault()
     setError('')
 
+    if (/\s/.test(username)) {
+      setError(t('setup.usernameNoSpaces'))
+      return
+    }
     if (password.length < 8) {
       setError(t('setup.passwordTooShort'))
       return
@@ -89,7 +93,7 @@ export default function SetupWizard() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-body)' }}>{t('setup.usernameField')}</label>
-            <input className="input-base" value={username} onChange={(e) => setUsername(e.target.value)} required />
+            <input className="input-base" value={username} onChange={(e) => setUsername(e.target.value.replace(/\s/g, ''))} required />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-body)' }}>{t('setup.password')}</label>

@@ -6,6 +6,11 @@ export type DrawerTab = 'hardware' | 'admin' | 'activity'
 export type StagingStatus = 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED'
 export type EventCategory = 'created' | 'updated' | 'checkin' | 'alert' | 'deleted' | 'approved'
 
+export interface InstalledApp {
+  name: string
+  version: string | null
+}
+
 export interface AdminUser {
   id: string
   fullName: string
@@ -27,7 +32,8 @@ export interface Asset {
   manufacturer: string
   model: string
   processor: string
-  memory: string
+  memory: number | null
+  diskStorageGB: number | null
   operatingSystem: string
   serialNumber: string
   macAddress: string
@@ -41,18 +47,28 @@ export interface Asset {
   notes: string
   status: AssetStatus
   lastSeen: string
+  installedApps: InstalledApp[] | null
   createdAt: string
   updatedAt: string
 }
 
 export interface NewAssetForm {
-  hostName: string
+  oldHostName: string
+  ipAddress: string
   deviceType: DeviceType
+  manufacturer: string
+  model: string
+  processor: string
+  memory: string
+  diskStorageGB: string
+  operatingSystem: string
   serialNumber: string
   macAddress: string
   owner: string
+  lastUser: string
   department: string
   location: string
+  lastMaintenanceDate: string
   notes: string
 }
 
@@ -63,7 +79,8 @@ export interface StagingDevice {
   serialNumber: string | null
   macAddress: string
   processor: string
-  memory: string
+  memory: number | null
+  diskStorageGB: number | null
   operatingSystem: string
   manufacturer: string
   model: string
@@ -77,6 +94,7 @@ export interface StagingDevice {
   location: string | null
   notes: string | null
   approvedDeviceId: string | null
+  installedApps: InstalledApp[] | null
 }
 
 export interface AuditLogEntry {
@@ -105,4 +123,11 @@ export interface StagingCounts {
   enrolled: number
   pending: number
   failed: number
+}
+
+export interface PingResult {
+  reachable: boolean
+  latencyMs: number | null
+  ipAddress: string
+  checkedAt: string
 }

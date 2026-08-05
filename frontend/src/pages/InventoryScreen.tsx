@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetService } from '../services/assetService'
 import { settingsService } from '../services/settingsService'
-import type { Asset, DropdownState } from '../types'
+import type { Asset, DeviceType, DropdownState } from '../types'
 import DeviceTypeBadge from '../components/DeviceTypeBadge'
 import StatusBadge from '../components/StatusBadge'
 import AssetDrawer from '../components/AssetDrawer'
@@ -13,16 +13,18 @@ import { IconSearch, IconUpload, IconSync, IconPlus, IconDownload, IconTrash } f
 import { useAuth } from '../AuthContext'
 
 const EMPTY_DROPDOWNS: DropdownState = { departments: [], locations: [] }
+const DEVICE_TYPES: DeviceType[] = ['Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router', 'Other']
 
 export default function InventoryScreen() {
   const { t } = useTranslation()
-  const { user: currentUser } = useAuth()
+  const { user } = useAuth()
   const [assets, setAssets] = useState<Asset[]>([])
   const [dropdowns, setDropdowns] = useState<DropdownState>(EMPTY_DROPDOWNS)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [department, setDepartment] = useState('All')
   const [location, setLocation] = useState('All')
+  const [deviceType, setDeviceType] = useState('All')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -54,18 +56,21 @@ export default function InventoryScreen() {
   }, [toast])
 
   const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase()
     return assets.filter((a) => {
       const matchesSearch =
-        !search ||
-        a.hostName?.toLowerCase().includes(search.toLowerCase()) ||
-        a.owner?.toLowerCase().includes(search.toLowerCase()) ||
-        a.model?.toLowerCase().includes(search.toLowerCase()) ||
-        a.serialNumber?.toLowerCase().includes(search.toLowerCase())
+        !term ||
+        [
+          a.hostName, a.oldHostName, a.owner, a.lastUser, a.model, a.manufacturer,
+          a.serialNumber, a.macAddress, a.ipAddress, a.operatingSystem, a.processor,
+          a.location, a.department, a.notes, a.achievedBy,
+        ].some((field) => field?.toLowerCase().includes(term))
       const matchesDept = department === 'All' || a.department === department
       const matchesLoc = location === 'All' || a.location === location
-      return matchesSearch && matchesDept && matchesLoc
+      const matchesType = deviceType === 'All' || a.deviceType === deviceType
+      return matchesSearch && matchesDept && matchesLoc && matchesType
     })
-  }, [assets, search, department, location])
+  }, [assets, search, department, location, deviceType])
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -114,12 +119,12 @@ export default function InventoryScreen() {
   const handleExportCsv = () => {
     const headers = [
       'Old Host Name', 'Host Name', 'IP Address', 'Device Type', 'Manufacturer', 'Model', 'Processor',
-      'Memory', 'Operating System', 'Serial Number', 'MAC Address', 'Location', 'Last User', 'Owner',
+      'Memory (GB)', 'Disk Storage (GB)', 'Operating System', 'Serial Number', 'MAC Address', 'Location', 'Last User', 'Owner',
       'Department', 'Data Source', 'Last Maintenance Date', 'Achieved By', 'Notes',
     ]
     const rows = filtered.map((a) => [
       a.oldHostName, a.hostName, a.ipAddress, a.deviceType, a.manufacturer, a.model, a.processor,
-      a.memory, a.operatingSystem, a.serialNumber, a.macAddress, a.location, a.lastUser, a.owner,
+      a.memory ?? '', a.diskStorageGB ?? '', a.operatingSystem, a.serialNumber, a.macAddress, a.location, a.lastUser, a.owner,
       a.department, a.dataSource, a.lastMaintenanceDate || '', a.achievedBy, (a.notes || '').replace(/\n/g, ' '),
     ])
     const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -142,26 +147,30 @@ export default function InventoryScreen() {
             {selectedIds.size > 0 && ` · ${t('inventory.selectedSuffix', { count: selectedIds.size })}`}
           </div>
         </div>
-        {currentUser?.role !== 'READ_ONLY_AUDITOR' && (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {user?.role !== 'READ_ONLY_AUDITOR' && (
             <button type="button" className="btn-ghost" onClick={() => setShowImportModal(true)}>
               <IconUpload size={13} />
               {t('inventory.importFile')}
             </button>
+          )}
+          {user?.role !== 'READ_ONLY_AUDITOR' && (
             <button type="button" className="btn-ghost" onClick={handleSync} disabled={syncing}>
               <IconSync size={13} spin={syncing} />
               {syncing ? t('inventory.syncing') : selectedIds.size > 0 ? t('inventory.syncSelected', { count: selectedIds.size }) : t('inventory.syncData')}
             </button>
-            <button type="button" className="btn-ghost" onClick={handleExportCsv}>
-              <IconDownload size={13} />
-              {t('inventory.exportCsv')}
-            </button>
+          )}
+          <button type="button" className="btn-ghost" onClick={handleExportCsv}>
+            <IconDownload size={13} />
+            {t('inventory.exportCsv')}
+          </button>
+          {user?.role !== 'READ_ONLY_AUDITOR' && (
             <button type="button" className="btn-primary" onClick={() => setShowAddModal(true)}>
               <IconPlus size={13} color="white" />
               {t('inventory.addAssetManually')}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {toast && (
@@ -199,7 +208,15 @@ export default function InventoryScreen() {
             </option>
           ))}
         </select>
-        {selectedIds.size > 0 && currentUser?.role !== 'READ_ONLY_AUDITOR' && (
+        <select className="input-base" style={{ width: 170 }} value={deviceType} onChange={(e) => setDeviceType(e.target.value)}>
+          <option value="All">{t('inventory.allDeviceTypes')}</option>
+          {DEVICE_TYPES.map((dt) => (
+            <option key={dt} value={dt}>
+              {t(`deviceType.${dt}`)}
+            </option>
+          ))}
+        </select>
+        {selectedIds.size > 0 && (
           <button type="button" className="btn-danger" onClick={() => setShowDeleteConfirm(true)}>
             <IconTrash size={12} /> {t('inventory.remove')} ({selectedIds.size})
           </button>
@@ -211,7 +228,7 @@ export default function InventoryScreen() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 920 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-elevated)' }}>
-                {currentUser?.role !== 'READ_ONLY_AUDITOR' && (
+                {user?.role !== 'READ_ONLY_AUDITOR' && (
                   <th style={{ padding: '10px 14px', textAlign: 'start', width: 36 }}>
                     <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleSelectAll} />
                   </th>
@@ -249,7 +266,7 @@ export default function InventoryScreen() {
                     style={{ borderBottom: '1px solid var(--border-faint)' }}
                     onClick={() => setSelectedAsset(asset)}
                   >
-                    {currentUser?.role !== 'READ_ONLY_AUDITOR' && (
+                    {(user?.role !== 'READ_ONLY_AUDITOR' &&
                       <td style={{ padding: '10px 14px' }} onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" checked={selectedIds.has(asset.id)} onChange={() => toggleSelect(asset.id)} />
                       </td>
@@ -301,8 +318,9 @@ export default function InventoryScreen() {
       {showImportModal && (
         <ImportModal
           onClose={() => setShowImportModal(false)}
-          onImported={(imported) => {
-            setAssets((prev) => [...imported, ...prev])
+          onImported={async (summary) => {
+            setToast(t('inventory.importToast', { created: summary.created, updated: summary.updated, skipped: summary.skipped.length }))
+            await loadAssets()
             setShowImportModal(false)
           }}
         />

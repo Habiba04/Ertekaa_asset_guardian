@@ -63,6 +63,63 @@ function Get-DeviceTypeGuess {
     }
 }
 
+function Get-TotalDiskStorageGB {
+    try {
+        $disks = Get-CimInstance -ClassName Win32_DiskDrive
+        $totalBytes = ($disks | Measure-Object -Property Size -Sum).Sum
+        return [Math]::Round(($totalBytes / 1GB), 0)
+    } catch {
+        Write-AgentLog "Failed to read disk storage: $($_.Exception.Message)"
+        return 0
+    }
+}
+
+function Get-InstalledApplications {
+    $uninstallPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+    )
+
+    $apps = @()
+
+    foreach ($basePath in $uninstallPaths) {
+        if (-not (Test-Path $basePath)) { continue }
+
+        $subKeys = Get-ChildItem -Path $basePath -ErrorAction SilentlyContinue
+        foreach ($key in $subKeys) {
+            try {
+                $displayName = $key.GetValue("DisplayName")
+                if ([string]::IsNullOrWhiteSpace($displayName)) { continue }
+
+                $systemComponent = $key.GetValue("SystemComponent")
+                if ($systemComponent -eq 1) { continue }
+
+                $parentKeyName = $key.GetValue("ParentKeyName")
+                if ($parentKeyName) { continue }
+
+                if ($displayName -match "Update for|Security Update|Hotfix") { continue }
+
+                $displayVersion = $key.GetValue("DisplayVersion")
+
+                $apps += [PSCustomObject]@{
+                    name    = [string]$displayName
+                    version = if ($displayVersion) { [string]$displayVersion } else { $null }
+                }
+            } catch {
+                continue
+            }
+        }
+    }
+
+    try {
+        return @($apps | Sort-Object name -Unique)
+    } catch {
+        Write-AgentLog "Failed to sort installed applications list: $($_.Exception.Message)"
+        return @($apps)
+    }
+}
+
 try {
     Write-AgentLog "Tracker agent run started (v$AgentVersion)."
 
@@ -73,6 +130,9 @@ try {
     $physicalMemory = Get-CimInstance -ClassName Win32_PhysicalMemory | Measure-Object -Property Capacity -Sum
 
     $totalMemoryGB = [Math]::Round(($physicalMemory.Sum / 1GB), 0)
+    $totalDiskGB = Get-TotalDiskStorageGB
+    $installedApps = Get-InstalledApplications
+    Write-AgentLog "DEBUG: installedApps count = $($installedApps.Count)"
 
     $payload = @{
         hostName         = $env:COMPUTERNAME
@@ -82,7 +142,9 @@ try {
         manufacturer     = $computerSystem.Manufacturer
         model            = $computerSystem.Model
         processor        = $processor.Name
-        memory           = "$totalMemoryGB GB"
+        memory           = $totalMemoryGB
+        diskStorageGB    = $totalDiskGB
+        installedApps    = $installedApps
         operatingSystem  = "$($os.Caption) $($os.Version)"
         deviceType       = Get-DeviceTypeGuess
         agentVersion     = $AgentVersion

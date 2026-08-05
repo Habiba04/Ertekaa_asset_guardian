@@ -82,7 +82,6 @@ interface SidebarProps {
 
 export default function Sidebar({ mobileOpen = false, onNavigate }: SidebarProps) {
   const { t } = useTranslation()
-  const { user: currentUser } = useAuth()
   const { user, logout } = useAuth()
   const [pendingCount, setPendingCount] = useState(0)
   const [onlineCount, setOnlineCount] = useState(0)
@@ -147,17 +146,19 @@ export default function Sidebar({ mobileOpen = false, onNavigate }: SidebarProps
         <NavGroupLabel>{t('sidebar.groupData')}</NavGroupLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <NavItem to="/inventory" icon={<IconList size={16} />} label={t('sidebar.inventory')} onClick={onNavigate} />
-          <NavItem
-            to="/staging-queue"
-            icon={<IconInbox size={16} />}
-            label={t('staging.reviewQueue')}
-            badge={pendingCount}
-            onClick={onNavigate}
-          />
+          {user?.role !== 'READ_ONLY_AUDITOR' && (
+            <NavItem
+              to="/staging-queue"
+              icon={<IconInbox size={16} />}
+              label={t('staging.reviewQueue')}
+              badge={pendingCount}
+              onClick={onNavigate}
+            />
+          )}
           <NavItem to="/audit-logs" icon={<IconActivity size={16} />} label={t('sidebar.auditLogs')} onClick={onNavigate} />
         </div>
 
-        {currentUser?.role !== 'READ_ONLY_AUDITOR' && (
+        {user?.role !== 'READ_ONLY_AUDITOR' && (
           <>
             <NavGroupLabel>{t('sidebar.groupSystem')}</NavGroupLabel>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
