@@ -9,7 +9,7 @@
   },
   "login": {
     "username": "اسم المستخدم",
-    "usernamePlaceholder": "admin@corp.internal",
+    "usernamePlaceholder": "admin_123",
     "password": "كلمة المرور",
     "forgotPassword": "نسيت كلمة المرور؟",
     "accessConsole": "الدخول إلى النظام",

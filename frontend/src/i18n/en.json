@@ -9,7 +9,7 @@
   },
   "login": {
     "username": "Username",
-    "usernamePlaceholder": "admin@corp.internal",
+    "usernamePlaceholder": "admin_123",
     "password": "Password",
     "forgotPassword": "Forgot password?",
     "accessConsole": "Access Console",

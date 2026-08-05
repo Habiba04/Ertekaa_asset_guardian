@@ -33,6 +33,7 @@ export default function SettingsScreen() {
   const [revoking, setRevoking] = useState(false)
   const [deletingDropdown, setDeletingDropdown] = useState<{ type: 'departments' | 'locations'; entry: DropdownValue } | null>(null)
   const [deletingDropdownBusy, setDeletingDropdownBusy] = useState(false)
+  const [toast, setToast] = useState('')
 
   const loadAll = async () => {
     const [adminsResp, dropdownsResp, countsResp] = await Promise.all([
@@ -49,6 +50,11 @@ export default function SettingsScreen() {
     loadAll()
   }, [])
 
+  useEffect(() => {
+    if(!toast) return
+    const timeout = setTimeout(() => setToast(''), 3200)
+    return () => clearTimeout(timeout)
+  }, [toast])
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   const handleAddAdmin = async () => {
@@ -78,10 +84,12 @@ export default function SettingsScreen() {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       setAddAdminError(message || t('settings.addAdminFailed'))
     }
+    setToast(`${newAdmin.fullName} is created!`)
   }
 
   const handleRoleChange = async (id: string, role: UserRole) => {
     await authService.updateAdminRole(id, role)
+    setToast(`Role Changed Successfully!`)
     loadAll()
   }
 
@@ -95,6 +103,7 @@ export default function SettingsScreen() {
     } finally {
       setRevoking(false)
     }
+    setToast(`Admin is Revoked!`)
   }
 
   const handleAddDropdown = async (type: 'departments' | 'locations') => {
@@ -103,6 +112,7 @@ export default function SettingsScreen() {
     await settingsService.addDropdownValue(type, value.trim())
     if (type === 'departments') setNewDept('')
     else setNewLoc('')
+    setToast(`Success!`)
     loadAll()
   }
 
@@ -116,6 +126,7 @@ export default function SettingsScreen() {
     } finally {
       setDeletingDropdownBusy(false)
     }
+    setToast(`Success!`)
   }
 
   const gpoCommand = `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { ${sharePath}\\install-agent.bat }"`
@@ -137,6 +148,12 @@ export default function SettingsScreen() {
         <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{t('settings.title')}</div>
         <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>{t('settings.subtitle')}</div>
       </div>
+      {toast && (
+        <div style={{ backgroundColor: 'rgba(26,127,55,0.1)', color: '#1a7f37', fontSize: 12.5, fontWeight: 500, padding: '8px 14px', borderRadius: 8, marginBottom: 14, display: 'flex', alignItems:"center", gap:6}}>
+          <IconCheck size={13} color="#1a7f37" /> 
+          {toast} 
+        </div>
+      )}
 
       {/* ── IT Administrator Accounts ─────────────────────────── */}
       <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 18 }}>

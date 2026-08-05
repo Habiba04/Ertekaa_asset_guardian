@@ -20,16 +20,41 @@ async function login(req, res, next) {
     });
 
     if (!user || !user.isActive) {
+      await AuditLog.create({
+        deviceId: null,
+        hostname: username,
+        eventType: 'Login Failed',
+        eventCategory: 'alert',
+        userSource: username,
+        changeSummary: `Failed login attempt for username "${username}" (account not fount or inactive).`
+      });
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
-
+    
     const passwordMatches = await bcrypt.compare(password, user.passwordHash);
     if (!passwordMatches) {
+      await AuditLog.create({
+        deviceId: null,
+        hostname: username,
+        eventType: 'Login Failed',
+        eventCategory: 'alert',
+        userSource: username,
+        changeSummary: `Failed login attempt for username "${username}" (Incorrect Password).`
+      });
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
-
+    
     user.lastLoginAt = new Date();
     await user.save();
+    
+    await AuditLog.create({
+      deviceId: null,
+      hostname: user.username,
+      eventType: 'Login',
+      eventCategory: 'checkin',
+      userSource: user.fullName,
+      changeSummary: `${user.fullName} signed in to Asset Guardian.`
+    });
 
     const token = signToken(user);
     res.json({ token, user: user.toSafeJSON() });
@@ -89,8 +114,21 @@ async function updateAdminRole(req, res, next) {
     const { role } = req.body;
     const admin = await User.findByPk(id);
     if (!admin) return res.status(404).json({ message: 'Administrator not found.' });
+
+    const previousRole = admin.role;
     admin.role = role;
     await admin.save();
+
+    if (previousRole !== role){
+      await AuditLog.create({
+        deviceId: null,
+        hostname: admin.username,
+        eventType: 'Role Changed',
+        eventCategory: "updated",
+        userSource: req.user.fullName,
+        changeSummary: `${admin.fullname}'s role changed from "${previousRole}" to "${role} by ${req.user.fullName}.`,
+      });
+    }
     res.json({ admin: admin.toSafeJSON() });
   } catch (err) {
     next(err);
