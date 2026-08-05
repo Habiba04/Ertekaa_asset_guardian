@@ -15,7 +15,7 @@
 # Update these two values to match your deployment before distributing
 # this script (or inject them via GPO / environment variables).
 $ApiBaseUrl   = "http://localhost:5000"          # Asset Guardian backend base URL
-$ApiKey       = "6cd3489d92d309a5b959120e8b4dfbe16634979455c7c53ba51c9208169d2587" # Must match backend AGENT_API_KEY
+$ApiKey       = "aa52806b1137fb306f25235e26ba269a60dd1b35a0c0c5c18ff5ed79ed151953" # Must match backend AGENT_API_KEY
 $StageRoute   = "$ApiBaseUrl/api/agent/stage"
 $LogPath      = "$env:ProgramData\AssetGuardian\agent.log"
 $AgentVersion = "2.1.4"
