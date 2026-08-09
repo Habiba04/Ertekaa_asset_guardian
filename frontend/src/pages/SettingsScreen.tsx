@@ -84,12 +84,12 @@ export default function SettingsScreen() {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       setAddAdminError(message || t('settings.addAdminFailed'))
     }
-    setToast(`${newAdmin.fullName} is created!`)
+    setToast(t('settings.newAdminSuccess'))
   }
 
   const handleRoleChange = async (id: string, role: UserRole) => {
     await authService.updateAdminRole(id, role)
-    setToast(`Role Changed Successfully!`)
+    setToast(t('settings.roleChangedSuccess'))
     loadAll()
   }
 
@@ -103,7 +103,7 @@ export default function SettingsScreen() {
     } finally {
       setRevoking(false)
     }
-    setToast(`Admin is Revoked!`)
+    setToast(t('settings.revokeAdminSuccess'))
   }
 
   const handleAddDropdown = async (type: 'departments' | 'locations') => {
@@ -112,7 +112,7 @@ export default function SettingsScreen() {
     await settingsService.addDropdownValue(type, value.trim())
     if (type === 'departments') setNewDept('')
     else setNewLoc('')
-    setToast(`Success!`)
+    setToast(t('settings.addDropdownSuccess'))
     loadAll()
   }
 
@@ -126,7 +126,7 @@ export default function SettingsScreen() {
     } finally {
       setDeletingDropdownBusy(false)
     }
-    setToast(`Success!`)
+    setToast(t('settings.deleteDropdownSuccess'))
   }
 
   const gpoCommand = `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { ${sharePath}\\install-agent.bat }"`

@@ -303,7 +303,12 @@
     "addAdminFailed": "Could not create administrator. Please check the details and try again.",
     "allFieldsRequired": "All fields are required.",
     "emailInvalid": "Please enter a valid email address (e.g. name@company.com).",
-    "passwordTooShort": "Password must be at least 8 characters long."
+    "passwordTooShort": "Password must be at least 8 characters long.",
+    "newAdminSuccess": "New administrator account created successfully.",
+    "revokeAdminSuccess": "Administrator access revoked successfully.",
+    "roleChangedSuccess": "Administrator role updated successfully.",
+    "addDropdownSuccess": "Value added successfully.",
+    "deleteDropdownSuccess": "Value deleted successfully."
   },
   "deviceType": {
     "Laptop": "Laptop",

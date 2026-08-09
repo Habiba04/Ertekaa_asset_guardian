@@ -303,7 +303,12 @@
     "addAdminFailed": "تعذر إنشاء المسؤول. يرجى التحقق من البيانات والمحاولة مرة أخرى.",
     "allFieldsRequired": "جميع الحقول مطلوبة.",
     "emailInvalid": "يرجى إدخال بريد إلكتروني صالح (مثال: name@company.com).",
-    "passwordTooShort": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل."
+    "passwordTooShort": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.",
+    "newAdminSuccess": "تم إنشاء حساب المسؤول الجديد بنجاح.",
+    "revokeAdminSuccess": "تم إلغاء وصول المسؤول بنجاح.",
+    "roleChangedSuccess": "تم تحديث دور المسؤول بنجاح.",
+    "addDropdownSuccess": "تم إضافة القيمة بنجاح.",
+    "deleteDropdownSuccess": "تم حذف القيمة بنجاح."
   },
   "deviceType": {
     "Laptop": "حاسوب محمول",
