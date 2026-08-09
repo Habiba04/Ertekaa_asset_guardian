@@ -2,6 +2,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User, AuditLog } = require('../models');
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 function signToken(user) {
   return jwt.sign({ sub: user.id, role: user.role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '8h',
@@ -26,34 +28,34 @@ async function login(req, res, next) {
         eventType: 'Login Failed',
         eventCategory: 'alert',
         userSource: username,
-        changeSummary: `Failed login attempt for username "${username}" (account not fount or inactive).`
+        changeSummary: `Failed login attempt for username "${username}" (account not found or inactive).`,
       });
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
-    
+
     const passwordMatches = await bcrypt.compare(password, user.passwordHash);
     if (!passwordMatches) {
       await AuditLog.create({
         deviceId: null,
-        hostname: username,
+        hostname: user.username,
         eventType: 'Login Failed',
         eventCategory: 'alert',
-        userSource: username,
-        changeSummary: `Failed login attempt for username "${username}" (Incorrect Password).`
+        userSource: user.fullName,
+        changeSummary: `Failed login attempt for ${user.fullName} (incorrect password).`,
       });
       return res.status(401).json({ message: 'Invalid credentials.' });
     }
-    
+
     user.lastLoginAt = new Date();
     await user.save();
-    
+
     await AuditLog.create({
       deviceId: null,
       hostname: user.username,
       eventType: 'Login',
       eventCategory: 'checkin',
       userSource: user.fullName,
-      changeSummary: `${user.fullName} signed in to Asset Guardian.`
+      changeSummary: `${user.fullName} signed in to Asset Guardian.`,
     });
 
     const token = signToken(user);
@@ -75,8 +77,6 @@ async function listAdmins(req, res, next) {
     next(err);
   }
 }
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function createAdmin(req, res, next) {
   try {
@@ -101,6 +101,8 @@ async function createAdmin(req, res, next) {
       passwordHash,
       role: role || 'IT_ADMIN',
       isActive: true,
+      // isRoot is never settable via this endpoint — only the Setup
+      // Wizard's very first account can ever be root.
     });
     res.status(201).json({ admin: admin.toSafeJSON() });
   } catch (err) {
@@ -115,20 +117,25 @@ async function updateAdminRole(req, res, next) {
     const admin = await User.findByPk(id);
     if (!admin) return res.status(404).json({ message: 'Administrator not found.' });
 
+    if (admin.isRoot) {
+      return res.status(403).json({ message: 'The root administrator account\'s role cannot be changed.' });
+    }
+
     const previousRole = admin.role;
     admin.role = role;
     await admin.save();
 
-    if (previousRole !== role){
+    if (previousRole !== role) {
       await AuditLog.create({
         deviceId: null,
         hostname: admin.username,
         eventType: 'Role Changed',
-        eventCategory: "updated",
+        eventCategory: 'updated',
         userSource: req.user.fullName,
-        changeSummary: `${admin.fullname}'s role changed from "${previousRole}" to "${role} by ${req.user.fullName}.`,
+        changeSummary: `${admin.fullName}'s role changed from "${previousRole}" to "${role}" by ${req.user.fullName}.`,
       });
     }
+
     res.json({ admin: admin.toSafeJSON() });
   } catch (err) {
     next(err);
@@ -138,12 +145,17 @@ async function updateAdminRole(req, res, next) {
 async function revokeAdmin(req, res, next) {
   try {
     const { id } = req.params;
+    const admin = await User.findByPk(id);
+    if (!admin) return res.status(404).json({ message: 'Administrator not found.' });
+
+    if (admin.isRoot) {
+      return res.status(403).json({ message: 'The root administrator account cannot be deleted.' });
+    }
+
     const total = await User.count();
     if (total <= 1) {
       return res.status(400).json({ message: 'Cannot remove the last remaining administrator.' });
     }
-    const admin = await User.findByPk(id);
-    if (!admin) return res.status(404).json({ message: 'Administrator not found.' });
     if (admin.id === req.user.id) {
       return res.status(400).json({ message: 'You cannot revoke your own access.' });
     }
@@ -191,6 +203,10 @@ async function resetAdminPassword(req, res, next) {
 
     const admin = await User.findByPk(id);
     if (!admin) return res.status(404).json({ message: 'Administrator not found.' });
+
+    if (admin.isRoot) {
+      return res.status(403).json({ message: 'Only the root administrator can reset their own password. Use Change Password while signed in as that account.' });
+    }
 
     admin.passwordHash = await bcrypt.hash(newPassword, 12);
     await admin.save();

@@ -3,6 +3,15 @@ const { sequelize } = require('../../config/database');
 
 class Device extends Model {}
 
+// Expanded beyond the original 7 categories to match the real device
+// types tracked in the office inventory (fingerprint scanners, access
+// points, firewalls, DVRs, screens, etc.), based on the abbreviation
+// codes actually used in the imported spreadsheet.
+const DEVICE_TYPES = [
+  'Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router', 'Other',
+  'Firewall', 'Access Point', 'DVR', 'Fingerprint Scanner', 'Screen',
+];
+
 Device.init(
   {
     id: {
@@ -14,11 +23,12 @@ Device.init(
     oldHostName: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
     // 2. Name / Host Name
     hostName: { type: DataTypes.STRING(120), allowNull: false },
-    // 3. IP Address
+    // 3. IP Address — optional: many assets (switches behind NAT, older
+    // printers, non-networked hardware) never get a usable IP on record.
     ipAddress: { type: DataTypes.STRING(45), allowNull: true },
     // 4. Device Type
     deviceType: {
-      type: DataTypes.ENUM('Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router', 'Other'),
+      type: DataTypes.ENUM(...DEVICE_TYPES),
       allowNull: false,
       defaultValue: 'Laptop',
     },
@@ -28,38 +38,42 @@ Device.init(
     model: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
     // 7. Processor
     processor: { type: DataTypes.STRING(160), allowNull: true, defaultValue: '' },
-    // 8. Memory (RAM)
+    // 8. Memory (RAM) — stored as a plain integer, always GB
     memory: { type: DataTypes.INTEGER, allowNull: true },
-    // 9. Disk Storage (GB)
+    // Disk / storage capacity — plain integer, always GB
     diskStorageGB: { type: DataTypes.INTEGER, allowNull: true },
-    // 10. Installed Applications (JSON array)
-    installedApps: { type: DataTypes.JSONB, allowNull: true },
-    // 11. Operating System
+    // 9. Operating System
     operatingSystem: { type: DataTypes.STRING(80), allowNull: true, defaultValue: '' },
-    // 12. Serial Number
+    // 10. Serial Number
     serialNumber: { type: DataTypes.STRING(120), allowNull: false, unique: true },
-    // 13. MAC Address
-    macAddress: { type: DataTypes.STRING(60), allowNull: false, unique: true },
-    // 14. Location
+    // 11. MAC Address — optional: not every asset type has one (a screen,
+    // a UPS, some printers) and manual entries shouldn't be blocked by it.
+    // Postgres allows multiple NULLs under a UNIQUE constraint (NULLs are
+    // never considered equal to each other), so this stays safe even with
+    // many devices that have no MAC on record.
+    macAddress: { type: DataTypes.STRING(60), allowNull: true, unique: true },
+    // 12. Location
     location: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
-    // 15. Last User
+    // 13. Last User
     lastUser: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
-    // 16. Owner (Current)
+    // 14. Owner (Current)
     owner: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
-    // 17. Description / Department
+    // 15. Description / Department
     department: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
-    // 18. Data Source
+    // 16. Data Source
     dataSource: {
       type: DataTypes.ENUM('Agent', 'Manual', 'CSV Import'),
       allowNull: false,
       defaultValue: 'Manual',
     },
-    // 19. Last Maintenance Date
+    // 17. Last Maintenance Date
     lastMaintenanceDate: { type: DataTypes.DATEONLY, allowNull: true },
-    // 20. Achieved By (visible/populated when Data Source is NOT Agent)
+    // 18. Achieved By (visible/populated when Data Source is NOT Agent)
     achievedBy: { type: DataTypes.STRING(160), allowNull: true, defaultValue: '' },
-    // 21. Notes
+    // 19. Notes
     notes: { type: DataTypes.TEXT, allowNull: true, defaultValue: '' },
+    // Non-preinstalled applications collected by the Guardian Agent
+    installedApps: { type: DataTypes.JSONB, allowNull: true, defaultValue: [] },
 
     // Operational / derived fields
     status: {
@@ -83,3 +97,4 @@ Device.init(
 );
 
 module.exports = Device;
+module.exports.DEVICE_TYPES = DEVICE_TYPES;

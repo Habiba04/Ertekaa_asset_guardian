@@ -1,5 +1,6 @@
 const { DataTypes, Model } = require('sequelize');
 const { sequelize } = require('../../config/database');
+const { DEVICE_TYPES } = require('./device.model');
 
 class StagingDevice extends Model {}
 
@@ -17,12 +18,12 @@ StagingDevice.init(
     processor: { type: DataTypes.STRING(160), allowNull: true },
     memory: { type: DataTypes.INTEGER, allowNull: true },
     diskStorageGB: { type: DataTypes.INTEGER, allowNull: true },
-    installedApps: { type: DataTypes.JSONB, allowNull: true },
+    installedApps: { type: DataTypes.JSONB, allowNull: true, defaultValue: [] },
     operatingSystem: { type: DataTypes.STRING(80), allowNull: true },
     manufacturer: { type: DataTypes.STRING(80), allowNull: true },
     model: { type: DataTypes.STRING(120), allowNull: true },
     deviceType: {
-      type: DataTypes.ENUM('Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router', 'Other'),
+      type: DataTypes.ENUM(...DEVICE_TYPES),
       allowNull: false,
       defaultValue: 'PC',
     },

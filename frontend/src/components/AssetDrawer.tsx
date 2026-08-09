@@ -12,7 +12,10 @@ import { useAuth } from '../AuthContext'
 
 type DrawerTab = 'hardware' | 'admin' | 'activity'
 
-const DEVICE_TYPES: DeviceType[] = ['Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router', 'Other']
+const DEVICE_TYPES: DeviceType[] = [
+  'Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router',
+  'Firewall', 'Access Point', 'DVR', 'Fingerprint Scanner', 'Screen', 'Other',
+]
 const MAC_ADDRESS_REGEX = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -41,8 +44,8 @@ interface AssetDrawerProps {
 
 export default function AssetDrawer({ asset, dropdowns, onClose, onUpdated }: AssetDrawerProps) {
   const { t } = useTranslation()
-  const isMobile = useMediaQuery('(max-width: 600px)')
   const { user: currentUser } = useAuth()
+  const isMobile = useMediaQuery('(max-width: 600px)')
   const [tab, setTab] = useState<DrawerTab>('hardware')
   const [isEditing, setIsEditing] = useState(false)
   const [form, setForm] = useState<Asset>(asset)
@@ -234,12 +237,12 @@ export default function AssetDrawer({ asset, dropdowns, onClose, onUpdated }: As
                   <select className="input-base" style={inputStyle} value={form.deviceType} onChange={(e) => update('deviceType', e.target.value)}>
                     {DEVICE_TYPES.map((dt) => (
                       <option key={dt} value={dt}>
-                        {t(`deviceType.${dt}`)}
+                        {t(`deviceType.${dt}`, dt)}
                       </option>
                     ))}
                   </select>
                 ) : (
-                  <ReadonlyValue value={t(`deviceType.${form.deviceType}`)} />
+                  <ReadonlyValue value={t(`deviceType.${form.deviceType}`, form.deviceType)} />
                 )}
               </Field>
               <Field label={t('drawer.serialNumber')}>
@@ -317,7 +320,7 @@ export default function AssetDrawer({ asset, dropdowns, onClose, onUpdated }: As
                     <input
                       className="input-base ltr-always"
                       style={inputStyle}
-                      value={form.macAddress}
+                      value={form.macAddress ?? ''}
                       placeholder="AA:BB:CC:DD:EE:FF"
                       onChange={(e) => update('macAddress', e.target.value)}
                     />
@@ -329,7 +332,7 @@ export default function AssetDrawer({ asset, dropdowns, onClose, onUpdated }: As
               </Field>
               <Field label={t('drawer.ipAddress')}>
                 {isEditing ? (
-                  <input className="input-base ltr-always" style={inputStyle} value={form.ipAddress} onChange={(e) => update('ipAddress', e.target.value)} />
+                  <input className="input-base ltr-always" style={inputStyle} value={form.ipAddress ?? ''} onChange={(e) => update('ipAddress', e.target.value)} />
                 ) : (
                   <div>
                     <div className="ltr-always" style={{ fontSize: 13, color: 'var(--text-primary)', padding: '7px 0' }}>
@@ -396,7 +399,7 @@ export default function AssetDrawer({ asset, dropdowns, onClose, onUpdated }: As
             </div>
             </>
           )}
-          
+
           {tab === 'admin' && (
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
               <Field label={t('drawer.currentOwner')}>

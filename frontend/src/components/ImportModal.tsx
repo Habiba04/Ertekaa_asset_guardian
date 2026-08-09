@@ -29,48 +29,81 @@ interface ParsedRow {
   owner?: string
   department?: string
   lastMaintenanceDate?: string
+  achievedBy?: string
   notes?: string
   [key: string]: unknown
 }
 
+// Matches the columns actually used in the real office inventory
+// spreadsheet. Required: Device Type, Serial #, Location, Department.
+// Everything else — including Name/Host Name and MAC Addresses — is
+// optional; a missing or broken hostname (e.g. Excel's "#NAME?" error)
+// gets auto-generated the same way manually-added assets do.
 const TEMPLATE_HEADERS = [
-  'Old Host Name', 'Host Name', 'IP Address', 'Device Type', 'Manufacturer', 'Model', 'Processor',
-  'Memory (GB)', 'Disk Storage (GB)', 'Operating System', 'Serial Number', 'MAC Address', 'Location',
-  'Last User', 'Owner', 'Department', 'Last Maintenance Date', 'Notes',
+  'Old Name', 'Name', 'IP Addresses', 'Device Type', 'Manufacturer', 'Model', 'processor',
+  'Memory', 'Disk Storage (GB)', 'Operating System', 'Serial #', 'MAC Addresses', 'Location',
+  'lastUser', 'Owner', 'Department', 'Q1 Maintenance Date', 'Achieved by', 'notes',
 ]
+
+const REQUIRED_HEADERS = ['Device Type', 'Serial #', 'Location', 'Department']
 
 const TEMPLATE_EXAMPLE_ROW = [
-  'OLD-PC-014', 'HQENGINEERING-LAPTOP001', '192.168.1.42', 'Laptop', 'Dell', 'Latitude 5420', 'Intel Core i7-1165G7',
-  '16', '512', 'Windows 11 Pro', 'SN123456789', 'AA:BB:CC:DD:EE:FF', 'HQ · Floor 1',
-  'jane.doe', 'Jane Doe', 'Engineering', '2026-01-15', 'Assigned during onboarding',
+  'OLD-PC-014', 'HQENGINEERING-LAPTOP001', '192.168.1.42', 'LT', 'Dell', 'Latitude 5420', 'Intel Core i7-1165G7',
+  '16', '512', 'Windows 11 Pro', 'SN123456789', 'AA:BB:CC:DD:EE:FF', 'HQ-HO',
+  'jane.doe', 'Jane Doe', 'Engineering', '2026-01-15', 'Mohamed Emad', 'Assigned during onboarding',
 ]
 
+// Maps every known column-name variant (both the app's own older export
+// format and the real office spreadsheet's headers, including its typo
+// "Maintnenace") down to a single canonical field name.
+const HEADER_MAP: Record<string, string> = {
+  'host name': 'hostName', hostname: 'hostName', name: 'hostName',
+  'old host name': 'oldHostName', 'old name': 'oldHostName',
+  'ip address': 'ipAddress', 'ip addresses': 'ipAddress', ip: 'ipAddress',
+  'device type': 'deviceType', type: 'deviceType',
+  manufacturer: 'manufacturer',
+  model: 'model',
+  processor: 'processor',
+  memory: 'memory', 'memory (ram)': 'memory', ram: 'memory', 'memory (gb)': 'memory',
+  'disk storage': 'diskStorageGB', 'disk storage (gb)': 'diskStorageGB', storage: 'diskStorageGB', 'disk (gb)': 'diskStorageGB',
+  'operating system': 'operatingSystem', os: 'operatingSystem',
+  'serial number': 'serialNumber', 'serial #': 'serialNumber', serial: 'serialNumber',
+  'mac address': 'macAddress', 'mac addresses': 'macAddress', mac: 'macAddress',
+  location: 'location',
+  'last user': 'lastUser', lastuser: 'lastUser',
+  owner: 'owner', 'owner (current)': 'owner',
+  department: 'department', 'description / department': 'department', description: 'department',
+  'last maintenance date': 'lastMaintenanceDate',
+  'q1 maintenance date': 'lastMaintenanceDate', 'q1 maintnenace date': 'lastMaintenanceDate',
+  'achieved by': 'achievedBy', achievedby: 'achievedBy',
+}
+
+// These two source column names both map to "notes" and get merged
+// together (rather than one silently overwriting the other), since the
+// real spreadsheet has both "Note" and "notes" as separate columns.
+const NOTE_SOURCE_KEYS = ['note', 'notes'];
+
 function normalizeKeys(row: Record<string, unknown>): ParsedRow {
-  const map: Record<string, string> = {
-    'host name': 'hostName', hostname: 'hostName', name: 'hostName',
-    'old host name': 'oldHostName', 'old name': 'oldHostName',
-    'ip address': 'ipAddress', ip: 'ipAddress',
-    'device type': 'deviceType', type: 'deviceType',
-    manufacturer: 'manufacturer',
-    model: 'model',
-    processor: 'processor',
-    memory: 'memory', 'memory (ram)': 'memory', ram: 'memory', 'memory (gb)': 'memory',
-    'disk storage': 'diskStorageGB', 'disk storage (gb)': 'diskStorageGB', storage: 'diskStorageGB', 'disk (gb)': 'diskStorageGB',
-    'operating system': 'operatingSystem', os: 'operatingSystem',
-    'serial number': 'serialNumber', serial: 'serialNumber',
-    'mac address': 'macAddress', mac: 'macAddress',
-    location: 'location',
-    'last user': 'lastUser',
-    owner: 'owner', 'owner (current)': 'owner',
-    department: 'department', 'description / department': 'department', description: 'department',
-    'last maintenance date': 'lastMaintenanceDate',
-    notes: 'notes',
-  }
   const normalized: ParsedRow = {}
-  Object.entries(row).forEach(([key, value]) => {
-    const cleanKey = map[key.trim().toLowerCase()] ?? key
-    normalized[cleanKey] = typeof value === 'string' ? value.trim() : value
+  const noteParts: string[] = []
+
+  Object.entries(row).forEach(([rawKey, value]) => {
+    const key = rawKey.trim().toLowerCase()
+    const stringValue = typeof value === 'string' ? value.trim() : value
+
+    if (NOTE_SOURCE_KEYS.includes(key)) {
+      if (stringValue && String(stringValue).trim()) noteParts.push(String(stringValue).trim())
+      return
+    }
+
+    const mappedKey = HEADER_MAP[key] ?? rawKey
+    normalized[mappedKey] = stringValue
   })
+
+  if (noteParts.length > 0) {
+    normalized.notes = noteParts.join(' | ')
+  }
+
   return normalized
 }
 
@@ -163,7 +196,7 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
         style={{
           backgroundColor: 'var(--bg-surface)',
           borderRadius: 12,
-          width: 540,
+          width: 560,
           maxWidth: '100%',
           maxHeight: '90vh',
           display: 'flex',
@@ -225,6 +258,11 @@ export default function ImportModal({ onClose, onImported }: ImportModalProps) {
               <IconDownload size={13} />
               {t('importModal.downloadTemplate')}
             </button>
+
+            <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginBottom: 14, backgroundColor: 'var(--bg-elevated)', borderRadius: 8, padding: '10px 12px' }}>
+              <strong style={{ color: 'var(--text-primary)' }}>{t('importModal.requiredLabel')}:</strong> {REQUIRED_HEADERS.join(', ')}.{' '}
+              {t('importModal.everythingElseOptional')}
+            </div>
 
             <input
               ref={fileInputRef}

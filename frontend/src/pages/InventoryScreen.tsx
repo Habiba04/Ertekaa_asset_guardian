@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { assetService } from '../services/assetService'
 import { settingsService } from '../services/settingsService'
@@ -9,11 +9,49 @@ import AssetDrawer from '../components/AssetDrawer'
 import AddAssetModal from '../components/AddAssetModal'
 import ImportModal from '../components/ImportModal'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { IconSearch, IconUpload, IconSync, IconPlus, IconDownload, IconTrash } from '../components/Icons'
+import { IconSearch, IconUpload, IconSync, IconPlus, IconDownload, IconTrash, IconColumns, IconCheck } from '../components/Icons'
 import { useAuth } from '../AuthContext'
 
 const EMPTY_DROPDOWNS: DropdownState = { departments: [], locations: [] }
-const DEVICE_TYPES: DeviceType[] = ['Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router', 'Other']
+const DEVICE_TYPES: DeviceType[] = [
+  'Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router',
+  'Firewall', 'Access Point', 'DVR', 'Fingerprint Scanner', 'Screen', 'Other',
+]
+
+interface ColumnDef {
+  key: string
+  labelKey: string
+  mandatory?: boolean
+  render: (a: Asset) => React.ReactNode
+}
+
+const COLUMN_DEFS: ColumnDef[] = [
+  { key: 'hostName', labelKey: 'inventory.colHostName', mandatory: true, render: (a) => <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{a.hostName}</span> },
+  { key: 'deviceType', labelKey: 'inventory.colType', render: (a) => <DeviceTypeBadge type={a.deviceType} /> },
+  { key: 'manufacturer', labelKey: 'inventory.colManufacturer', render: (a) => <>{a.manufacturer || '—'}</> },
+  { key: 'model', labelKey: 'inventory.colModel', render: (a) => <>{a.model || '—'}</> },
+  { key: 'operatingSystem', labelKey: 'inventory.colOs', render: (a) => <>{a.operatingSystem || '—'}</> },
+  { key: 'status', labelKey: 'inventory.colStatus', render: (a) => <StatusBadge status={a.status} /> },
+  { key: 'owner', labelKey: 'inventory.colOwner', render: (a) => <>{a.owner || '—'}</> },
+  { key: 'department', labelKey: 'inventory.colDepartment', render: (a) => <>{a.department || '—'}</> },
+  { key: 'location', labelKey: 'inventory.colLocation', render: (a) => <>{a.location || '—'}</> },
+  { key: 'lastSeen', labelKey: 'inventory.colLastSeen', render: (a) => <span style={{ whiteSpace: 'nowrap' }}>{new Date(a.lastSeen).toLocaleString()}</span> },
+  { key: 'ipAddress', labelKey: 'inventory.colIpAddress', render: (a) => <span className="ltr-always">{a.ipAddress || '—'}</span> },
+  { key: 'macAddress', labelKey: 'inventory.colMacAddress', render: (a) => <span className="ltr-always">{a.macAddress || '—'}</span> },
+  { key: 'serialNumber', labelKey: 'inventory.colSerialNumber', render: (a) => <>{a.serialNumber || '—'}</> },
+  { key: 'processor', labelKey: 'inventory.colProcessor', render: (a) => <>{a.processor || '—'}</> },
+  { key: 'memory', labelKey: 'inventory.colMemory', render: (a) => <>{a.memory != null ? `${a.memory} GB` : '—'}</> },
+  { key: 'diskStorageGB', labelKey: 'inventory.colDiskStorage', render: (a) => <>{a.diskStorageGB != null ? `${a.diskStorageGB} GB` : '—'}</> },
+  { key: 'lastUser', labelKey: 'inventory.colLastUser', render: (a) => <>{a.lastUser || '—'}</> },
+  { key: 'oldHostName', labelKey: 'inventory.colOldHostName', render: (a) => <>{a.oldHostName || '—'}</> },
+  { key: 'dataSource', labelKey: 'inventory.colDataSource', render: (a) => <>{a.dataSource}</> },
+]
+
+const DEFAULT_VISIBLE_COLUMNS = [
+  'hostName', 'deviceType', 'manufacturer', 'model', 'operatingSystem',
+  'status', 'owner', 'department', 'location', 'lastSeen',
+]
+const COLUMN_PREFS_KEY = 'ag_inventory_columns'
 
 export default function InventoryScreen() {
   const { t } = useTranslation()
@@ -33,6 +71,45 @@ export default function InventoryScreen() {
   const [toast, setToast] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showColumnPicker, setShowColumnPicker] = useState(false)
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(COLUMN_PREFS_KEY)
+      if (saved) return new Set(JSON.parse(saved))
+    } catch {
+      // fall through to defaults
+    }
+    return new Set(DEFAULT_VISIBLE_COLUMNS)
+  })
+  const columnPickerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    localStorage.setItem(COLUMN_PREFS_KEY, JSON.stringify(Array.from(visibleColumns)))
+  }, [visibleColumns])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (columnPickerRef.current && !columnPickerRef.current.contains(e.target as Node)) {
+        setShowColumnPicker(false)
+      }
+    }
+    if (showColumnPicker) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showColumnPicker])
+
+  const toggleColumn = (key: string) => {
+    setVisibleColumns((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const activeColumns = useMemo(
+    () => COLUMN_DEFS.filter((c) => c.mandatory || visibleColumns.has(c.key)),
+    [visibleColumns]
+  )
 
   const loadAssets = async () => {
     setLoading(true)
@@ -119,13 +196,13 @@ export default function InventoryScreen() {
   const handleExportCsv = () => {
     const headers = [
       'Old Host Name', 'Host Name', 'IP Address', 'Device Type', 'Manufacturer', 'Model', 'Processor',
-      'Memory (GB)', 'Disk Storage (GB)', 'Operating System', 'Serial Number', 'MAC Address', 'Location', 'Last User', 'Owner',
-      'Department', 'Data Source', 'Last Maintenance Date', 'Achieved By', 'Notes',
+      'Memory (GB)', 'Disk Storage (GB)', 'Operating System', 'Serial Number', 'MAC Address', 'Location',
+      'Last User', 'Owner', 'Department', 'Last Maintenance Date', 'Achieved By', 'Notes',
     ]
     const rows = filtered.map((a) => [
       a.oldHostName, a.hostName, a.ipAddress, a.deviceType, a.manufacturer, a.model, a.processor,
-      a.memory ?? '', a.diskStorageGB ?? '', a.operatingSystem, a.serialNumber, a.macAddress, a.location, a.lastUser, a.owner,
-      a.department, a.dataSource, a.lastMaintenanceDate || '', a.achievedBy, (a.notes || '').replace(/\n/g, ' '),
+      a.memory ?? '', a.diskStorageGB ?? '', a.operatingSystem, a.serialNumber, a.macAddress, a.location,
+      a.lastUser, a.owner, a.department, a.lastMaintenanceDate || '', a.achievedBy, (a.notes || '').replace(/\n/g, ' '),
     ])
     const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -164,6 +241,58 @@ export default function InventoryScreen() {
             <IconDownload size={13} />
             {t('inventory.exportCsv')}
           </button>
+          <div style={{ position: 'relative' }} ref={columnPickerRef}>
+            <button type="button" className="btn-ghost" onClick={() => setShowColumnPicker((v) => !v)}>
+              <IconColumns size={13} />
+              {t('inventory.columns')}
+            </button>
+            {showColumnPicker && (
+              <div
+                style={{
+                  position: 'absolute',
+                  insetInlineEnd: 0,
+                  top: '110%',
+                  zIndex: 30,
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 10,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  padding: 10,
+                  width: 240,
+                  maxHeight: 340,
+                  overflowY: 'auto',
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', padding: '4px 6px 8px' }}>
+                  {t('inventory.columnsPickerTitle')}
+                </div>
+                {COLUMN_DEFS.map((col) => (
+                  <label
+                    key={col.key}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '6px 6px',
+                      fontSize: 12.5,
+                      color: col.mandatory ? 'var(--text-secondary)' : 'var(--text-primary)',
+                      cursor: col.mandatory ? 'default' : 'pointer',
+                      borderRadius: 6,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={col.mandatory || visibleColumns.has(col.key)}
+                      disabled={col.mandatory}
+                      onChange={() => toggleColumn(col.key)}
+                    />
+                    {t(col.labelKey)}
+                    {col.mandatory && <span style={{ fontSize: 10, marginInlineStart: 'auto' }}>{t('inventory.columnAlwaysShown')}</span>}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
           {user?.role !== 'READ_ONLY_AUDITOR' && (
             <button type="button" className="btn-primary" onClick={() => setShowAddModal(true)}>
               <IconPlus size={13} color="white" />
@@ -174,7 +303,8 @@ export default function InventoryScreen() {
       </div>
 
       {toast && (
-        <div style={{ backgroundColor: 'rgba(26,127,55,0.1)', color: '#1a7f37', fontSize: 12.5, fontWeight: 500, padding: '8px 14px', borderRadius: 8, marginBottom: 14 }}>
+        <div style={{ backgroundColor: 'rgba(26,127,55,0.1)', color: '#1a7f37', fontSize: 12.5, fontWeight: 500, padding: '8px 14px', borderRadius: 8, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <IconCheck size={13} color="#1a7f37" />
           {toast}
         </div>
       )}
@@ -212,7 +342,7 @@ export default function InventoryScreen() {
           <option value="All">{t('inventory.allDeviceTypes')}</option>
           {DEVICE_TYPES.map((dt) => (
             <option key={dt} value={dt}>
-              {t(`deviceType.${dt}`)}
+              {t(`deviceType.${dt}`, dt)}
             </option>
           ))}
         </select>
@@ -233,28 +363,23 @@ export default function InventoryScreen() {
                     <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleSelectAll} />
                   </th>
                 )}
-                <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colHostName')}</th>
-                <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colType')}</th>
-                <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colManufacturer')}</th>
-                <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colModel')}</th>
-                <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colOs')}</th>
-                <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colStatus')}</th>
-                <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colOwner')}</th>
-                <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colDepartment')}</th>
-                <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colLocation')}</th>
-                <th style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('inventory.colLastSeen')}</th>
+                {activeColumns.map((col) => (
+                  <th key={col.key} style={{ padding: '10px 14px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    {t(col.labelKey)}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={11} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <td colSpan={activeColumns.length + 1} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>
                     {t('common.loading')}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={11} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  <td colSpan={activeColumns.length + 1} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>
                     {t('inventory.noRecords')}
                   </td>
                 </tr>
@@ -266,27 +391,16 @@ export default function InventoryScreen() {
                     style={{ borderBottom: '1px solid var(--border-faint)' }}
                     onClick={() => setSelectedAsset(asset)}
                   >
-                    {(user?.role !== 'READ_ONLY_AUDITOR' &&
+                    {user?.role !== 'READ_ONLY_AUDITOR' && (
                       <td style={{ padding: '10px 14px' }} onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" checked={selectedIds.has(asset.id)} onChange={() => toggleSelect(asset.id)} />
                       </td>
                     )}
-                    <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>{asset.hostName}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <DeviceTypeBadge type={asset.deviceType} />
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-body)' }}>{asset.manufacturer || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-body)' }}>{asset.model || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-body)' }}>{asset.operatingSystem || '—'}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <StatusBadge status={asset.status} />
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-body)' }}>{asset.owner || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-body)' }}>{asset.department || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-body)' }}>{asset.location || '—'}</td>
-                    <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                      {new Date(asset.lastSeen).toLocaleString()}
-                    </td>
+                    {activeColumns.map((col) => (
+                      <td key={col.key} style={{ padding: '10px 14px', color: 'var(--text-body)' }}>
+                        {col.render(asset)}
+                      </td>
+                    ))}
                   </tr>
                 ))
               )}

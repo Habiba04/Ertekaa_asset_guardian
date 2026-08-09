@@ -1,4 +1,6 @@
-export type DeviceType = 'Laptop' | 'PC' | 'Switch' | 'Server' | 'Printer' | 'Router' | 'Other'
+export type DeviceType =
+  | 'Laptop' | 'PC' | 'Switch' | 'Server' | 'Printer' | 'Router' | 'Other'
+  | 'Firewall' | 'Access Point' | 'DVR' | 'Fingerprint Scanner' | 'Screen'
 export type AssetStatus = 'online' | 'remote' | 'unregistered'
 export type DataSource = 'Agent' | 'Manual' | 'CSV Import'
 export type UserRole = 'SUPER_ADMIN' | 'IT_ADMIN' | 'READ_ONLY_AUDITOR'
@@ -17,6 +19,7 @@ export interface AdminUser {
   email: string
   username: string
   role: UserRole
+  isRoot: boolean
   mfaEnabled: boolean
   isActive: boolean
   lastLoginAt: string | null
@@ -27,7 +30,7 @@ export interface Asset {
   id: string
   oldHostName: string
   hostName: string
-  ipAddress: string
+  ipAddress: string | null
   deviceType: DeviceType
   manufacturer: string
   model: string
@@ -36,7 +39,7 @@ export interface Asset {
   diskStorageGB: number | null
   operatingSystem: string
   serialNumber: string
-  macAddress: string
+  macAddress: string | null
   location: string
   lastUser: string
   owner: string
