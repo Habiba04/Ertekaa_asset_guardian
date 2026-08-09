@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "Asset Guardian",
-    "tagline": "Fleet Intelligence Console"
+    "name": "Asset Manager",
+    "tagline": "IT Asset Intelligence Console"
   },
   "language": {
     "en": "EN",
@@ -16,10 +16,10 @@
     "authenticating": "Authenticating...",
     "restrictedTitle": "Restricted access.",
     "restrictedBody": "This console is for authorized IT personnel only. All sessions are logged and monitored.",
-    "footer": "Asset Guardian v2.1.4 · © 2025 Corp IT",
+    "footer": "Asset Manager v2.1.4 · © 2025 Corp IT",
     "invalidCredentials": "Invalid username or password.",
     "forgotPasswordTitle": "Forgot your password?",
-    "forgotPasswordBody": "Asset Guardian doesn't send password reset emails. Contact a Super Admin in your organization — they can reset your password for you from Settings → IT Administrator Accounts."
+    "forgotPasswordBody": "Asset Manager doesn't send password reset emails. Contact a Super Admin in your organization — they can reset your password for you from Settings → IT Administrator Accounts."
   },
   "setup": {
     "title": "Create the Super Admin Account",
@@ -48,12 +48,12 @@
     "superAdmin": "Super Admin",
     "itAdmin": "IT Admin",
     "readOnlyAuditor": "Read-Only Auditor",
-    "fleetConsole": "FLEET CONSOLE"
+    "fleetConsole": "SYSTEM CONSOLE"
   },
   "dashboard": {
     "title": "Operational Overview",
-    "subtitle": "Fleet status as of {{date}} · Auto-refreshes every 60 sec",
-    "metricTotalFleet": "Total Fleet",
+    "subtitle": "Asset status as of {{date}} · Auto-refreshes every 60 sec",
+    "metricTotalFleet": "Total Assets",
     "metricTotalFleetSub": "Enrolled devices",
     "metricActive": "Active in Office",
     "metricActiveSub": "On corporate LAN",

@@ -392,33 +392,49 @@ async function bulkImportAssets(req, res, next) {
       const matchConditions = [{ serialNumber }];
       if (macAddress) matchConditions.push({ macAddress });
 
-      const existing = await Device.findOne({
-        where: { [Op.or]: matchConditions },
-      });
+      // Each row's actual database write is isolated in its own
+      // try/catch. Without this, a single row hitting a DB-level
+      // constraint (column-length overflow, a duplicate unique value
+      // slipping past the pre-checks, etc.) would throw all the way up
+      // and abort the ENTIRE batch — silently discarding the outcome
+      // of every other row already processed, with no useful feedback
+      // beyond a generic 500 error.
+      try {
+        const existing = await Device.findOne({
+          where: { [Op.or]: matchConditions },
+        });
 
-      if (existing) {
-        Object.assign(existing, payload);
-        await existing.save();
-        await logEvent({
-          deviceId: existing.id,
-          hostname: existing.hostName,
-          eventType: 'Updated',
-          eventCategory: 'updated',
-          userSource: `${req.user.fullName} (CSV Import)`,
-          changeSummary: 'Existing device updated via bulk CSV/Excel import (matched by serial number or MAC address).',
-        });
-        updated.push(existing);
-      } else {
-        const asset = await Device.create(payload);
-        await logEvent({
-          deviceId: asset.id,
-          hostname: asset.hostName,
-          eventType: 'Created',
-          eventCategory: 'created',
-          userSource: `${req.user.fullName} (CSV Import)`,
-          changeSummary: 'Device enrolled via bulk CSV/Excel import.',
-        });
-        created.push(asset);
+        if (existing) {
+          Object.assign(existing, payload);
+          await existing.save();
+          await logEvent({
+            deviceId: existing.id,
+            hostname: existing.hostName,
+            eventType: 'Updated',
+            eventCategory: 'updated',
+            userSource: `${req.user.fullName} (CSV Import)`,
+            changeSummary: 'Existing device updated via bulk CSV/Excel import (matched by serial number or MAC address).',
+          });
+          updated.push(existing);
+        } else {
+          const asset = await Device.create(payload);
+          await logEvent({
+            deviceId: asset.id,
+            hostname: asset.hostName,
+            eventType: 'Created',
+            eventCategory: 'created',
+            userSource: `${req.user.fullName} (CSV Import)`,
+            changeSummary: 'Device enrolled via bulk CSV/Excel import.',
+          });
+          created.push(asset);
+        }
+      } catch (rowError) {
+        const reason = rowError.name === 'SequelizeUniqueConstraintError'
+          ? `Duplicate value conflicts with another record: ${rowError.errors?.map((e) => e.message).join(', ') || rowError.message}`
+          : rowError.name === 'SequelizeDatabaseError'
+            ? `Database rejected this row: ${rowError.original?.message || rowError.message}`
+            : `Failed to save this row: ${rowError.message}`;
+        skipped.push({ row, reason });
       }
     }
 

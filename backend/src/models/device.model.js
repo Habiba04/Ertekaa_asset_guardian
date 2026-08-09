@@ -25,7 +25,7 @@ Device.init(
     hostName: { type: DataTypes.STRING(120), allowNull: false },
     // 3. IP Address — optional: many assets (switches behind NAT, older
     // printers, non-networked hardware) never get a usable IP on record.
-    ipAddress: { type: DataTypes.STRING(45), allowNull: true },
+    ipAddress: { type: DataTypes.STRING(255), allowNull: true },
     // 4. Device Type
     deviceType: {
       type: DataTypes.ENUM(...DEVICE_TYPES),
@@ -51,7 +51,7 @@ Device.init(
     // Postgres allows multiple NULLs under a UNIQUE constraint (NULLs are
     // never considered equal to each other), so this stays safe even with
     // many devices that have no MAC on record.
-    macAddress: { type: DataTypes.STRING(60), allowNull: true, unique: true },
+    macAddress: { type: DataTypes.STRING(255), allowNull: true, unique: true },
     // 12. Location
     location: { type: DataTypes.STRING(120), allowNull: true, defaultValue: '' },
     // 13. Last User
