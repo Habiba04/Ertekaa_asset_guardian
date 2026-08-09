@@ -129,7 +129,19 @@
     "statusRemote": "Remote",
     "statusRogue": "Rogue",
     "allDeviceTypes": "All Device Types",
-    "importToast": "{{created}} created, {{updated}} updated, {{skipped}} skipped."
+    "importToast": "{{created}} created, {{updated}} updated, {{skipped}} skipped.",
+    "columns": "Columns",
+    "columnsPickerTitle": "Show/Hide Columns",
+    "columnAlwaysShown": "Always shown",
+    "colIpAddress": "IP Address",
+    "colMacAddress": "MAC Address",
+    "colSerialNumber": "Serial Number",
+    "colProcessor": "Processor",
+    "colMemory": "Memory",
+    "colDiskStorage": "Disk Storage",
+    "colLastUser": "Last User",
+    "colOldHostName": "Old Host Name",
+    "colDataSource": "Data Source"
   },
   "drawer": {
     "tabHardware": "Hardware",
@@ -216,7 +228,8 @@
     "lastUser": "Last Logged User",
     "maintenanceDate": "Last Maintenance Date",
     "genericError": "Something went wrong while creating this asset. Please try again.",
-    "duplicateError": "A device with this Serial Number or MAC Address already exists in the inventory."
+    "duplicateError": "A device with this Serial Number or MAC Address already exists in the inventory.",
+    "optional": "Optional"
   },
   "importModal": {
     "title": "Import Devices from File",
@@ -233,7 +246,9 @@
     "created": "Created",
     "updated": "Updated",
     "skipped": "Skipped",
-    "dedupeNotice": "Rows matching an existing Serial Number or MAC Address will update that record instead of creating a duplicate."
+    "dedupeNotice": "Rows matching an existing Serial Number or MAC Address will update that record instead of creating a duplicate.",
+    "requiredLabel": "Required",
+    "everythingElseOptional": "Everything else is optional"
   },
   "auditLogs": {
     "title": "Audit Logs",
@@ -308,7 +323,9 @@
     "revokeAdminSuccess": "Administrator access revoked successfully.",
     "roleChangedSuccess": "Administrator role updated successfully.",
     "addDropdownSuccess": "Value added successfully.",
-    "deleteDropdownSuccess": "Value deleted successfully."
+    "deleteDropdownSuccess": "Value deleted successfully.",
+    "rootBadge": "Root",
+    "rootAccountTooltip": "This is the protected root account. Only this account holder can change its password, and it can never be deleted or reassigned."
   },
   "deviceType": {
     "Laptop": "Laptop",
@@ -317,6 +334,11 @@
     "Server": "Server",
     "Printer": "Printer",
     "Router": "Router",
+    "Firewall": "Firewall",
+    "Access Point": "Access Point",
+    "DVR": "DVR",
+    "Fingerprint Scanner": "Fingerprint Scanner",
+    "Screen": "Screen",
     "Other": "Other"
   },
   "dataSource": {

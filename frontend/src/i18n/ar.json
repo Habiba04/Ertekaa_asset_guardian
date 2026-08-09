@@ -129,7 +129,19 @@
     "statusRemote": "عن بُعد",
     "statusRogue": "غير موثوق",
     "allDeviceTypes": "جميع أنواع الأجهزة",
-    "importToast": "تم إنشاء {{created}}، وتحديث {{updated}}، وتخطي {{skipped}}."
+    "importToast": "تم إنشاء {{created}}، وتحديث {{updated}}، وتخطي {{skipped}}.",
+    "columns": "الأعمدة",
+    "columnsPickerTitle": "إظهار/إخفاء الأعمدة",
+    "columnAlwaysShown": "يظهر دائمًا",
+    "colIpAddress": "عنوان IP",
+    "colMacAddress": "عنوان MAC",
+    "colSerialNumber": "الرقم التسلسلي",
+    "colProcessor": "المعالج",
+    "colMemory": "الذاكرة",
+    "colDiskStorage": "سعة التخزين",
+    "colLastUser": "آخر مستخدم",
+    "colOldHostName": "اسم المضيف القديم",
+    "colDataSource": "مصدر البيانات"
   },
   "drawer": {
     "tabHardware": "الأجهزة",
@@ -216,7 +228,8 @@
     "lastUser": "آخر مستخدم مسجّل",
     "maintenanceDate": "تاريخ آخر صيانة",
     "genericError": "حدث خطأ أثناء إنشاء هذا الجهاز. يرجى المحاولة مرة أخرى.",
-    "duplicateError": "يوجد بالفعل جهاز بنفس الرقم التسلسلي أو عنوان MAC في المخزون."
+    "duplicateError": "يوجد بالفعل جهاز بنفس الرقم التسلسلي أو عنوان MAC في المخزون.",
+    "optional": "اختياري"
   },
   "importModal": {
     "title": "استيراد الأجهزة من ملف",
@@ -233,7 +246,9 @@
     "created": "تم الإنشاء",
     "updated": "تم التحديث",
     "skipped": "تم التخطي",
-    "dedupeNotice": "الصفوف المطابقة لرقم تسلسلي أو عنوان MAC موجود مسبقًا ستُحدّث ذلك السجل بدلاً من إنشاء نسخة مكررة."
+    "dedupeNotice": "الصفوف المطابقة لرقم تسلسلي أو عنوان MAC موجود مسبقًا ستُحدّث ذلك السجل بدلاً من إنشاء نسخة مكررة.",
+    "requiredLabel": "مطلوب",
+    "everythingElseOptional": "كل شيء آخر اختياري."
   },
   "auditLogs": {
     "title": "سجلات التدقيق",
@@ -308,7 +323,9 @@
     "revokeAdminSuccess": "تم إلغاء وصول المسؤول بنجاح.",
     "roleChangedSuccess": "تم تحديث دور المسؤول بنجاح.",
     "addDropdownSuccess": "تم إضافة القيمة بنجاح.",
-    "deleteDropdownSuccess": "تم حذف القيمة بنجاح."
+    "deleteDropdownSuccess": "تم حذف القيمة بنجاح.",
+    "rootBadge": "جذري",
+    "rootAccountTooltip": "هذا هو الحساب الجذري المحمي. فقط صاحب هذا الحساب يمكنه تغيير كلمة مروره، ولا يمكن حذفه أو تغيير دوره أبدًا."
   },
   "deviceType": {
     "Laptop": "حاسوب محمول",
@@ -317,6 +334,11 @@
     "Server": "خادم",
     "Printer": "طابعة",
     "Router": "موجّه",
+    "Firewall": "جدار حماية",
+    "Access Point": "نقطة وصول",
+    "DVR": "مسجل فيديو رقمي",
+    "Fingerprint Scanner": "جهاز بصمة",
+    "Screen": "شاشة",
     "Other": "أخرى"
   },
   "dataSource": {
