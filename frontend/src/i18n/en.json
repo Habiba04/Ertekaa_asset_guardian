@@ -264,7 +264,7 @@
     "colChangeSummary": "Change Details",
     "noEvents": "No events match your current filters.",
     "showingCount": "Showing {{count}} of {{total}} events",
-    "retentionNote": "Logs retained for 90 days · All times UTC+0",
+    "retentionNote": "Logs retained · All times UTC+0",
     "catAll": "All Events",
     "catAlert": "Alerts",
     "catCreated": "Created",

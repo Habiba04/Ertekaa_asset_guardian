@@ -7,7 +7,7 @@ import Pagination from '../components/Pagination'
 import { IconSearch, IconDownload } from '../components/Icons'
 
 const CATEGORIES: (EventCategory | 'All')[] = ['All', 'created', 'updated', 'checkin', 'approved', 'deleted', 'alert']
-const DEFAULT_PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 25
 const SEARCH_DEBOUNCE_MS = 350
 
 export default function AuditLogsScreen() {

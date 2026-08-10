@@ -18,7 +18,7 @@ const DEVICE_TYPES: DeviceType[] = [
   'Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router',
   'Firewall', 'Access Point', 'DVR', 'Fingerprint Scanner', 'Screen', 'Other',
 ]
-const DEFAULT_PAGE_SIZE = 20
+const DEFAULT_PAGE_SIZE = 25
 const SEARCH_DEBOUNCE_MS = 350
 
 interface ColumnDef {
