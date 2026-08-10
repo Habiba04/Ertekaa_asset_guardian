@@ -54,9 +54,48 @@ async function generateHostname(location, department, deviceType) {
   return `${locationSlug}${departmentSlug}-${typeSlug}${nextId}`;
 }
 
-function validateMacAddress(mac) {
-  if (!mac) return true; // optional — no value at all is fine
-  return MAC_ADDRESS_REGEX.test(mac);
+// Clean invisible Unicode directional characters and trim whitespace
+function sanitizeString(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/[\u202A-\u202E\u200E\u200F\uFEFF]/g, '') // Strips hidden LTR/RTL Unicode marks
+    .trim();
+}
+
+/**
+ * Cleans and standardizes MAC addresses:
+ * 1. Takes the FIRST MAC if multiple are comma-separated.
+ * 2. Removes hidden Unicode characters.
+ * 3. Standardizes separators (converts dashes/dots to colons).
+ * 4. Converts to uppercase.
+ */
+/**
+ * Cleans and standardizes one or multiple comma-separated MAC addresses.
+ * e.g. "00:15:5D:07:AD:DD, C0:E4:34:DF:36:7B"
+ */
+function cleanMacAddress(rawMac) {
+  let macStr = sanitizeString(rawMac);
+  if (!macStr) return null;
+
+  // Split by comma if multiple are present, clean each one individually
+  const macs = macStr
+    .split(',')
+    .map((item) => {
+      let m = sanitizeString(item);
+      m = m.replace(/[-.]/g, ':').toUpperCase();
+      return m;
+    })
+    .filter(Boolean);
+
+  return macs.join(', ') || null;
+}
+
+function validateMacAddress(macStr) {
+  if (!macStr) return true; // optional
+  
+  // Validate every comma-separated MAC address in the string
+  const macs = macStr.split(',').map((s) => s.trim()).filter(Boolean);
+  return macs.every((mac) => MAC_ADDRESS_REGEX.test(mac));
 }
 
 /**
@@ -343,49 +382,53 @@ async function bulkImportAssets(req, res, next) {
     const skipped = [];
 
     for (const row of rows) {
-      const serialNumber = row.serialNumber ? String(row.serialNumber).trim() : '';
-      const location = row.location ? String(row.location).trim() : '';
-      const department = row.department ? String(row.department).trim() : '';
-      const deviceType = normalizeDeviceType(row.deviceType);
-      const macAddress = row.macAddress ? String(row.macAddress).trim() : '';
+  const serialNumber = sanitizeString(row.serialNumber);
+  const location = sanitizeString(row.location);
+  const department = sanitizeString(row.department);
+  const deviceType = normalizeDeviceType(row.deviceType);
+  
+  // Clean and sanitize the MAC address
+  const macAddress = cleanMacAddress(row.macAddress);
 
-      if (!serialNumber || !location || !department) {
-        skipped.push({ row, reason: 'Missing required field (Serial Number, Location, or Department).' });
-        continue;
-      }
-      if (macAddress && !validateMacAddress(macAddress)) {
-        skipped.push({ row, reason: `Invalid MAC address format: "${macAddress}".` });
-        continue;
-      }
+  if (!serialNumber || !location || !department) {
+    skipped.push({ row, reason: 'Missing required field (Serial Number, Location, or Department).' });
+    continue;
+  }
 
-      let hostName = row.hostName ? String(row.hostName).trim() : '';
-      if (!isUsableHostname(hostName)) {
-        hostName = await generateHostname(location, department, deviceType);
-      }
+  // Validate cleaned MAC
+  if (macAddress && !validateMacAddress(macAddress)) {
+    skipped.push({ row, reason: `Invalid MAC address format: "${row.macAddress}".` });
+    continue;
+  }
 
-      const payload = {
-        oldHostName: row.oldHostName || '',
-        hostName,
-        ipAddress: row.ipAddress ? String(row.ipAddress).trim() : null,
-        deviceType,
-        manufacturer: row.manufacturer || '',
-        model: row.model || '',
-        processor: row.processor || '',
-        memory: row.memory ? parseInt(row.memory, 10) || null : null,
-        diskStorageGB: row.diskStorageGB ? parseInt(row.diskStorageGB, 10) || null : null,
-        operatingSystem: row.operatingSystem || '',
-        serialNumber,
-        macAddress: macAddress || null,
-        location,
-        lastUser: row.lastUser || '',
-        owner: row.owner || '',
-        department,
-        dataSource: 'CSV Import',
-        achievedBy: row.achievedBy ? String(row.achievedBy).trim() : `${req.user.fullName} (CSV Import)`,
-        lastMaintenanceDate: row.lastMaintenanceDate || null,
-        notes: row.notes || '',
-        status: 'online',
-      };
+  let hostName = sanitizeString(row.hostName);
+  if (!isUsableHostname(hostName)) {
+    hostName = await generateHostname(location, department, deviceType);
+  }
+
+  const payload = {
+    oldHostName: sanitizeString(row.oldHostName) || '',
+    hostName,
+    ipAddress: sanitizeString(row.ipAddress) || null,
+    deviceType,
+    manufacturer: sanitizeString(row.manufacturer) || '',
+    model: sanitizeString(row.model) || '',
+    processor: sanitizeString(row.processor) || '',
+    memory: row.memory ? parseInt(row.memory, 10) || null : null,
+    diskStorageGB: row.diskStorageGB ? parseInt(row.diskStorageGB, 10) || null : null,
+    operatingSystem: sanitizeString(row.operatingSystem) || '',
+    serialNumber,
+    macAddress: macAddress || null,
+    location,
+    lastUser: sanitizeString(row.lastUser) || '',
+    owner: sanitizeString(row.owner) || '',
+    department,
+    dataSource: 'CSV Import',
+    achievedBy: sanitizeString(row.achievedBy) || `${req.user.fullName} (CSV Import)`,
+    lastMaintenanceDate: row.lastMaintenanceDate || null,
+    notes: sanitizeString(row.notes) || '',
+    status: 'online',
+  };
 
       // Only match on MAC address when one was actually provided — a
       // blank MAC must never be used to match rows against each other.
