@@ -9,6 +9,7 @@ import AssetDrawer from '../components/AssetDrawer'
 import AddAssetModal from '../components/AddAssetModal'
 import ImportModal from '../components/ImportModal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import Pagination from '../components/Pagination'
 import { IconSearch, IconUpload, IconSync, IconPlus, IconDownload, IconTrash, IconColumns, IconCheck } from '../components/Icons'
 import { useAuth } from '../AuthContext'
 
@@ -17,6 +18,8 @@ const DEVICE_TYPES: DeviceType[] = [
   'Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router',
   'Firewall', 'Access Point', 'DVR', 'Fingerprint Scanner', 'Screen', 'Other',
 ]
+const DEFAULT_PAGE_SIZE = 20
+const SEARCH_DEBOUNCE_MS = 350
 
 interface ColumnDef {
   key: string
@@ -57,17 +60,22 @@ export default function InventoryScreen() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [assets, setAssets] = useState<Asset[]>([])
+  const [total, setTotal] = useState(0)
   const [dropdowns, setDropdowns] = useState<DropdownState>(EMPTY_DROPDOWNS)
   const [loading, setLoading] = useState(true)
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [department, setDepartment] = useState('All')
   const [location, setLocation] = useState('All')
   const [deviceType, setDeviceType] = useState('All')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [toast, setToast] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -84,6 +92,38 @@ export default function InventoryScreen() {
   const columnPickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      setSearch(searchInput)
+      setPage(1)
+    }, SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timeout)
+  }, [searchInput])
+
+  useEffect(() => {
+    setPage(1)
+  }, [department, location, deviceType])
+
+  const loadAssets = async () => {
+    setLoading(true)
+    try {
+      const resp = await assetService.list({ search, department, location, deviceType, page, pageSize })
+      setAssets(resp.assets)
+      setTotal(resp.total)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadAssets()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, department, location, deviceType, page, pageSize])
+
+  useEffect(() => {
+    settingsService.listDropdowns().then(setDropdowns).catch(() => setDropdowns(EMPTY_DROPDOWNS))
+  }, [])
+
+  useEffect(() => {
     localStorage.setItem(COLUMN_PREFS_KEY, JSON.stringify(Array.from(visibleColumns)))
   }, [visibleColumns])
 
@@ -96,6 +136,12 @@ export default function InventoryScreen() {
     if (showColumnPicker) document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showColumnPicker])
+
+  useEffect(() => {
+    if (!toast) return
+    const timeout = setTimeout(() => setToast(''), 3200)
+    return () => clearTimeout(timeout)
+  }, [toast])
 
   const toggleColumn = (key: string) => {
     setVisibleColumns((prev) => {
@@ -111,43 +157,7 @@ export default function InventoryScreen() {
     [visibleColumns]
   )
 
-  const loadAssets = async () => {
-    setLoading(true)
-    try {
-      const resp = await assetService.list({})
-      setAssets(resp.assets)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadAssets()
-    settingsService.listDropdowns().then(setDropdowns).catch(() => setDropdowns(EMPTY_DROPDOWNS))
-  }, [])
-
-  useEffect(() => {
-    if (!toast) return
-    const timeout = setTimeout(() => setToast(''), 3200)
-    return () => clearTimeout(timeout)
-  }, [toast])
-
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    return assets.filter((a) => {
-      const matchesSearch =
-        !term ||
-        [
-          a.hostName, a.oldHostName, a.owner, a.lastUser, a.model, a.manufacturer,
-          a.serialNumber, a.macAddress, a.ipAddress, a.operatingSystem, a.processor,
-          a.location, a.department, a.notes, a.achievedBy,
-        ].some((field) => field?.toLowerCase().includes(term))
-      const matchesDept = department === 'All' || a.department === department
-      const matchesLoc = location === 'All' || a.location === location
-      const matchesType = deviceType === 'All' || a.deviceType === deviceType
-      return matchesSearch && matchesDept && matchesLoc && matchesType
-    })
-  }, [assets, search, department, location, deviceType])
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -158,13 +168,21 @@ export default function InventoryScreen() {
     })
   }
 
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filtered.length) {
-      setSelectedIds(new Set())
-    } else {
-      setSelectedIds(new Set(filtered.map((a) => a.id)))
-    }
+  const toggleSelectAllOnPage = () => {
+    const pageIds = assets.map((a) => a.id)
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id))
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allSelected) {
+        pageIds.forEach((id) => next.delete(id))
+      } else {
+        pageIds.forEach((id) => next.add(id))
+      }
+      return next
+    })
   }
+
+  const isPageFullySelected = assets.length > 0 && assets.every((a) => selectedIds.has(a.id))
 
   const handleSync = async () => {
     setSyncing(true)
@@ -193,25 +211,31 @@ export default function InventoryScreen() {
     }
   }
 
-  const handleExportCsv = () => {
-    const headers = [
-      'Old Host Name', 'Host Name', 'IP Address', 'Device Type', 'Manufacturer', 'Model', 'Processor',
-      'Memory (GB)', 'Disk Storage (GB)', 'Operating System', 'Serial Number', 'MAC Address', 'Location',
-      'Last User', 'Owner', 'Department', 'Last Maintenance Date', 'Achieved By', 'Notes',
-    ]
-    const rows = filtered.map((a) => [
-      a.oldHostName, a.hostName, a.ipAddress, a.deviceType, a.manufacturer, a.model, a.processor,
-      a.memory ?? '', a.diskStorageGB ?? '', a.operatingSystem, a.serialNumber, a.macAddress, a.location,
-      a.lastUser, a.owner, a.department, a.lastMaintenanceDate || '', a.achievedBy, (a.notes || '').replace(/\n/g, ' '),
-    ])
-    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `asset-guardian-inventory-${new Date().toISOString().slice(0, 10)}.csv`
-    link.click()
-    URL.revokeObjectURL(url)
+  const handleExportCsv = async () => {
+    setExporting(true)
+    try {
+      const resp = await assetService.list({ search, department, location, deviceType, page: 1, pageSize: 100000 })
+      const headers = [
+        'Old Host Name', 'Host Name', 'IP Address', 'Device Type', 'Manufacturer', 'Model', 'Processor',
+        'Memory (GB)', 'Disk Storage (GB)', 'Operating System', 'Serial Number', 'MAC Address', 'Location',
+        'Last User', 'Owner', 'Department', 'Last Maintenance Date', 'Achieved By', 'Notes',
+      ]
+      const rows = resp.assets.map((a) => [
+        a.oldHostName, a.hostName, a.ipAddress, a.deviceType, a.manufacturer, a.model, a.processor,
+        a.memory ?? '', a.diskStorageGB ?? '', a.operatingSystem, a.serialNumber, a.macAddress, a.location,
+        a.lastUser, a.owner, a.department, a.lastMaintenanceDate || '', a.achievedBy, (a.notes || '').replace(/\n/g, ' '),
+      ])
+      const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `asset-guardian-inventory-${new Date().toISOString().slice(0, 10)}.csv`
+      link.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setExporting(false)
+    }
   }
 
   return (
@@ -220,7 +244,7 @@ export default function InventoryScreen() {
         <div>
           <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{t('inventory.title')}</div>
           <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>
-            {t('inventory.subtitle', { filtered: filtered.length, total: assets.length })}
+            {t('inventory.subtitle', { filtered: total, total })}
             {selectedIds.size > 0 && ` · ${t('inventory.selectedSuffix', { count: selectedIds.size })}`}
           </div>
         </div>
@@ -237,9 +261,9 @@ export default function InventoryScreen() {
               {syncing ? t('inventory.syncing') : selectedIds.size > 0 ? t('inventory.syncSelected', { count: selectedIds.size }) : t('inventory.syncData')}
             </button>
           )}
-          <button type="button" className="btn-ghost" onClick={handleExportCsv}>
+          <button type="button" className="btn-ghost" onClick={handleExportCsv} disabled={exporting}>
             <IconDownload size={13} />
-            {t('inventory.exportCsv')}
+            {exporting ? t('common.loading') : t('inventory.exportCsv')}
           </button>
           <div style={{ position: 'relative' }} ref={columnPickerRef}>
             <button type="button" className="btn-ghost" onClick={() => setShowColumnPicker((v) => !v)}>
@@ -318,8 +342,8 @@ export default function InventoryScreen() {
             className="input-base"
             style={{ paddingInlineStart: 32 }}
             placeholder={t('inventory.searchPlaceholder') ?? ''}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
         <select className="input-base" style={{ width: 180 }} value={department} onChange={(e) => setDepartment(e.target.value)}>
@@ -360,7 +384,7 @@ export default function InventoryScreen() {
               <tr style={{ borderBottom: '1px solid var(--border)', backgroundColor: 'var(--bg-elevated)' }}>
                 {user?.role !== 'READ_ONLY_AUDITOR' && (
                   <th style={{ padding: '10px 14px', textAlign: 'start', width: 36 }}>
-                    <input type="checkbox" checked={filtered.length > 0 && selectedIds.size === filtered.length} onChange={toggleSelectAll} />
+                    <input type="checkbox" checked={isPageFullySelected} onChange={toggleSelectAllOnPage} />
                   </th>
                 )}
                 {activeColumns.map((col) => (
@@ -377,14 +401,14 @@ export default function InventoryScreen() {
                     {t('common.loading')}
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : assets.length === 0 ? (
                 <tr>
                   <td colSpan={activeColumns.length + 1} style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)' }}>
                     {t('inventory.noRecords')}
                   </td>
                 </tr>
               ) : (
-                filtered.map((asset) => (
+                assets.map((asset) => (
                   <tr
                     key={asset.id}
                     className="table-row-hover"
@@ -407,6 +431,15 @@ export default function InventoryScreen() {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+        />
       </div>
 
       {selectedAsset && (
@@ -425,7 +458,7 @@ export default function InventoryScreen() {
         <AddAssetModal
           dropdowns={dropdowns}
           onClose={() => setShowAddModal(false)}
-          onCreated={(created) => setAssets((prev) => [created, ...prev])}
+          onCreated={() => { loadAssets() }}
         />
       )}
 

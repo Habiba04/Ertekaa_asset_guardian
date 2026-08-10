@@ -377,5 +377,12 @@
     "close": "إغلاق",
     "confirm": "تأكيد",
     "actions": "الإجراءات"
+  },
+  "pagination": {
+    "showingRange": "عرض {{start}}–{{end}} من {{total}}",
+    "perPage": "{{count}} / صفحة",
+    "previous": "السابق",
+    "next": "التالي",
+    "pageOf": "صفحة {{page}} من {{totalPages}}"
   }
 }

@@ -3,7 +3,9 @@ const { AuditLog } = require('../models');
 
 async function listAuditLogs(req, res, next) {
   try {
-    const { search = '', category = 'All', dateFrom, dateTo, page = 1, pageSize = 100 } = req.query;
+    const {
+      search = '', category = 'All', dateFrom, dateTo, page = 1, pageSize = 50,
+    } = req.query;
 
     const where = {};
     if (search) {
@@ -37,7 +39,14 @@ async function listAuditLogs(req, res, next) {
         : await AuditLog.count({ where: { eventCategory: cat } });
     }
 
-    res.json({ logs: rows, total: count, page: Number(page), pageSize: Number(pageSize), categoryCounts });
+    res.json({
+      logs: rows,
+      total: count,
+      page: Number(page),
+      pageSize: Number(pageSize),
+      totalPages: Math.max(1, Math.ceil(count / Number(pageSize))),
+      categoryCounts,
+    });
   } catch (err) {
     next(err);
   }

@@ -377,5 +377,12 @@
     "close": "Close",
     "confirm": "Confirm",
     "actions": "Actions"
+  },
+  "pagination": {
+    "showingRange": "Showing {{start}}–{{end}} of {{total}}",
+    "perPage": "{{count}} / page",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{page}} of {{totalPages}}"
   }
 }

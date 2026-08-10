@@ -6,6 +6,8 @@ export interface ListAuditLogsParams {
   category?: string
   dateFrom?: string
   dateTo?: string
+  page?: number
+  pageSize?: number
 }
 
 export interface ListAuditLogsResponse {
@@ -13,6 +15,7 @@ export interface ListAuditLogsResponse {
   total: number
   page: number
   pageSize: number
+  totalPages: number
   categoryCounts: Record<string, number>
 }
 
