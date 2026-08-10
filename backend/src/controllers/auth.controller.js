@@ -1,6 +1,9 @@
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { Op } = require('sequelize');
 const { User, AuditLog } = require('../models');
+const { sendOtpEmail } = require('../services/emailService');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -217,6 +220,126 @@ async function resetAdminPassword(req, res, next) {
   }
 }
 
+async function requestPasswordOtp(req, res, next) {
+  try {
+    const { email, lang } = req.body; // <-- EXTRACT `lang` FROM FRONTEND
+    if (!email) {
+      return res.status(400).json({ message: 'Email address is required.' });
+    }
+
+    const user = await User.findOne({ where: { email: email.toLowerCase().trim() } });
+    if (!user) {
+      // Prevents user enumeration attacks
+      return res.json({ message: 'If an account exists with that email, an OTP has been sent.' });
+    }
+
+    // Generate random 6-digit OTP
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Hash OTP before saving
+    const hashedOtp = crypto.createHash('sha256').update(otpCode).digest('hex');
+    
+    // Set 10-minute expiration
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.resetOtp = hashedOtp;
+    user.resetOtpExpires = expiresAt;
+    await user.save();
+
+    // Send Email passing the user's selected language (`lang`)
+    await sendOtpEmail(user.email, otpCode, lang || 'en');
+
+    res.json({ message: 'Verification OTP sent to your email.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// 2. Verify OTP
+async function verifyPasswordOtp(req, res, next) {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required.' });
+    }
+
+    const hashedOtp = crypto.createHash('sha256').update(otp.trim()).digest('hex');
+
+    const user = await User.findOne({
+      where: {
+        email: email.toLowerCase().trim(),
+        resetOtp: hashedOtp,
+        resetOtpExpires: { [Op.gt]: new Date() },
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired OTP.' });
+    }
+
+    const resetTokenSecret = process.env.RESET_TOKEN_SECRET || process.env.JWT_SECRET;
+    const resetToken = jwt.sign(
+      { userId: user.id, email: user.email, purpose: 'password_reset' },
+      resetTokenSecret,
+      { expiresIn: '15m' }
+    );
+
+    res.json({ resetToken });
+  } catch (err) {
+    next(err);
+  }
+}
+
+// 3. Reset Password with Token
+async function resetPasswordWithToken(req, res, next) {
+  try {
+    const { email, resetToken, newPassword } = req.body;
+    if (!email || !resetToken || !newPassword) {
+      return res.status(400).json({ message: 'Missing required parameters.' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long.' });
+    }
+
+    const resetTokenSecret = process.env.RESET_TOKEN_SECRET || process.env.JWT_SECRET;
+    let decoded;
+    try {
+      decoded = jwt.verify(resetToken, resetTokenSecret);
+    } catch {
+      return res.status(401).json({ message: 'Invalid or expired password reset token.' });
+    }
+
+    if (decoded.purpose !== 'password_reset' || decoded.email !== email.toLowerCase().trim()) {
+      return res.status(401).json({ message: 'Invalid reset token payload.' });
+    }
+
+    const user = await User.findByPk(decoded.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Match your existing password hashing strategy (bcrypt 12 salt rounds & passwordHash field)
+    user.passwordHash = await bcrypt.hash(newPassword, 12);
+    user.resetOtp = null;
+    user.resetOtpExpires = null;
+    await user.save();
+
+    await AuditLog.create({
+      deviceId: null,
+      hostname: user.username,
+      eventType: 'Password Reset',
+      eventCategory: 'updated',
+      userSource: user.fullName,
+      changeSummary: `${user.fullName} reset their password via email OTP verification.`,
+    });
+
+    res.json({ message: 'Password reset successfully.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
-  login, me, listAdmins, createAdmin, updateAdminRole, revokeAdmin, changeMyPassword, resetAdminPassword,
+  login, me, listAdmins, createAdmin, updateAdminRole, revokeAdmin, changeMyPassword, resetAdminPassword, requestPasswordOtp, verifyPasswordOtp, resetPasswordWithToken,
 };

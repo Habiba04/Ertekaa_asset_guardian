@@ -64,6 +64,14 @@ User.init(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    resetOtp: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    resetOtpExpires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     sequelize,

@@ -369,6 +369,21 @@
     "successTitle": "Password reset successfully.",
     "successBody": "Share the new password with the administrator securely."
   },
+  "forgotPassword": {
+    "title": "Forgot Password",
+    "emailInstructions": "Enter your registered email address to receive a verification OTP.",
+    "emailLabel": "Email Address",
+    "sendOtp": "Send OTP",
+    "emailError": "Failed to send OTP. Please check the email.",
+    "otpInstructions": "We sent a verification code to",
+    "checkSpamNote": "(If you don't see it in your inbox, please check your spam/junk folder.)",
+    "otpLabel": "Verification OTP",
+    "resendOtp": "Resend OTP",
+    "verifyOtp": "Verify OTP",
+    "otpError": "Invalid or expired OTP.",
+    "otpResent": "A new OTP has been sent to your email.",
+    "resendError": "Failed to resend OTP."
+  },
   "common": {
     "loading": "Loading…",
     "error": "Something went wrong. Please try again.",

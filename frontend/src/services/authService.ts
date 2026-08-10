@@ -1,5 +1,6 @@
 import apiClient from './apiClient'
 import type { AdminUser } from '../types'
+import i18n from '../i18n'
 
 export interface LoginResponse {
   token: string
@@ -72,4 +73,19 @@ export const authService = {
     const { data } = await apiClient.patch(`/auth/admins/${id}/password`, { newPassword })
     return data
   },
+
+  async requestPasswordOtp(email: string) {
+    const response = await apiClient.post('/auth/forgot-password/request-otp', { email, lang: i18n.language })
+    return response.data
+  },
+
+  async verifyPasswordOtp(email: string, otp: string) {
+    const response = await apiClient.post('/auth/forgot-password/verify-otp', { email, otp })
+    return response.data // e.g. { resetToken: "..." }
+  },
+
+  async resetPasswordWithToken({ email, resetToken, newPassword }: Record<string, string>) {
+    const response = await apiClient.post('/auth/forgot-password/reset', { email, resetToken, newPassword })
+    return response.data
+  }
 }
