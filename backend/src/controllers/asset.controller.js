@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const { exec } = require('child_process');
 const os = require('os');
 const { Device, AuditLog } = require('../models');
+const { DEVICE_TYPES } = require('../models/device.model');
 
 const MAC_ADDRESS_REGEX = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/;
 
@@ -38,10 +39,9 @@ function slugify(value) {
 }
 
 /**
- * Generates a hostname for manually-added assets following the pattern:
- * {location}{department}-{deviceType}{sequentialId}
- * The sequential id is per location+department+deviceType combination so
- * numbering stays predictable and short (e.g. HQFLOOR1ENGINEERING-LAPTOP001).
+ * Generates a hostname for manually-added or hostname-less imported
+ * assets, following the pattern: {location}{department}-{deviceType}{id}
+ * The sequential id is per location+department+deviceType combination.
  */
 async function generateHostname(location, department, deviceType) {
   const locationSlug = slugify(location) || 'LOC';
@@ -54,9 +54,95 @@ async function generateHostname(location, department, deviceType) {
   return `${locationSlug}${departmentSlug}-${typeSlug}${nextId}`;
 }
 
-function validateMacAddress(mac) {
-  if (!mac) return true; // optional in some flows (e.g. partial CSV rows are rejected elsewhere)
-  return MAC_ADDRESS_REGEX.test(mac);
+// Clean invisible Unicode directional characters and trim whitespace
+function sanitizeString(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/[\u202A-\u202E\u200E\u200F\uFEFF]/g, '') // Strips hidden LTR/RTL Unicode marks
+    .trim();
+}
+
+/**
+ * Cleans and standardizes MAC addresses:
+ * 1. Takes the FIRST MAC if multiple are comma-separated.
+ * 2. Removes hidden Unicode characters.
+ * 3. Standardizes separators (converts dashes/dots to colons).
+ * 4. Converts to uppercase.
+ */
+/**
+ * Cleans and standardizes one or multiple comma-separated MAC addresses.
+ * e.g. "00:15:5D:07:AD:DD, C0:E4:34:DF:36:7B"
+ */
+function cleanMacAddress(rawMac) {
+  let macStr = sanitizeString(rawMac);
+  if (!macStr) return null;
+
+  // Split by comma if multiple are present, clean each one individually
+  const macs = macStr
+    .split(',')
+    .map((item) => {
+      let m = sanitizeString(item);
+      m = m.replace(/[-.]/g, ':').toUpperCase();
+      return m;
+    })
+    .filter(Boolean);
+
+  return macs.join(', ') || null;
+}
+
+function validateMacAddress(macStr) {
+  if (!macStr) return true; // optional
+  
+  // Validate every comma-separated MAC address in the string
+  const macs = macStr.split(',').map((s) => s.trim()).filter(Boolean);
+  return macs.every((mac) => MAC_ADDRESS_REGEX.test(mac));
+}
+
+/**
+ * A hostname is considered "unusable" (and gets auto-generated instead)
+ * if it's blank, or if it's an Excel formula-error artifact like
+ * "#NAME?", "#REF!", "#VALUE!" etc. — these show up in real spreadsheets
+ * when a formula breaks, and are not real hostnames.
+ */
+function isUsableHostname(value) {
+  if (!value || !String(value).trim()) return false;
+  if (/^#[A-Z/]+[!?]?$/.test(String(value).trim())) return false; // #NAME?, #REF!, #DIV/0! etc.
+  return true;
+}
+
+// Maps the abbreviation codes used in the real-world import spreadsheet
+// to the app's Device Type values. Anything not recognized here falls
+// back to "Other" rather than failing the import — easy to correct
+// afterward from the Inventory table.
+const DEVICE_TYPE_CODE_MAP = {
+  lt: 'Laptop',
+  dt: 'PC',
+  pc: 'PC',
+  pr: 'Printer',
+  prn: 'Printer',
+  sr: 'Server',
+  srv: 'Server',
+  sw: 'Switch',
+  rt: 'Router',
+  rtr: 'Router',
+  fw: 'Firewall',
+  ap: 'Access Point',
+  dvr: 'DVR',
+  fp: 'Fingerprint Scanner',
+  screen: 'Screen',
+  other: 'Other',
+};
+
+function normalizeDeviceType(rawValue) {
+  const trimmed = String(rawValue || '').trim();
+  if (!trimmed) return 'Other';
+
+  // If it's already an exact, valid Device Type value, keep it as-is.
+  const exactMatch = DEVICE_TYPES.find((t) => t.toLowerCase() === trimmed.toLowerCase());
+  if (exactMatch) return exactMatch;
+
+  const mapped = DEVICE_TYPE_CODE_MAP[trimmed.toLowerCase()];
+  return mapped || 'Other';
 }
 
 async function listAssets(req, res, next) {
@@ -133,18 +219,21 @@ async function createAsset(req, res, next) {
       return res.status(422).json({ message: 'MAC address must follow the format AA:BB:CC:DD:EE:FF.' });
     }
 
-    // Manually-created assets always carry these fields automatically
     payload.dataSource = payload.dataSource || 'Manual';
     if (payload.dataSource === 'Manual' && !payload.achievedBy) {
       payload.achievedBy = `${req.user.fullName} (Manual Input)`;
     }
     payload.status = payload.status || 'online';
 
-    // Hostname for manually-added assets is always system-generated from
-    // Location + Department + Device Type, never freely typed by the user.
     if (payload.dataSource === 'Manual') {
       payload.hostName = await generateHostname(payload.location, payload.department, payload.deviceType);
     }
+
+    // MAC/IP are optional — normalize blank strings to null so the
+    // unique constraint on macAddress never sees duplicate empty
+    // strings across multiple devices that simply have none on record.
+    if (!payload.macAddress) payload.macAddress = null;
+    if (!payload.ipAddress) payload.ipAddress = null;
 
     const asset = await Device.create(payload);
 
@@ -171,6 +260,8 @@ async function updateAsset(req, res, next) {
     if (req.body.macAddress && !validateMacAddress(req.body.macAddress)) {
       return res.status(422).json({ message: 'MAC address must follow the format AA:BB:CC:DD:EE:FF.' });
     }
+    if (req.body.macAddress === '') req.body.macAddress = null;
+    if (req.body.ipAddress === '') req.body.ipAddress = null;
 
     const before = asset.toJSON();
     Object.assign(asset, req.body);
@@ -240,12 +331,6 @@ async function bulkDeleteAssets(req, res, next) {
   }
 }
 
-/**
- * On-demand agent polling. In production this would push a wake/poll
- * signal to the target machines (e.g. via a message queue the installed
- * agent listens on). Here we simulate the round trip, refresh lastSeen,
- * and log an Agent Sync event for each targeted device.
- */
 async function syncAssets(req, res, next) {
   try {
     const { ids = [] } = req.body;
@@ -275,12 +360,15 @@ async function syncAssets(req, res, next) {
 }
 
 /**
- * Bulk CSV/Excel import. De-duplicates against existing inventory by
- * serial number OR MAC address: if a match is found the existing record
- * is updated in place (and logged as an Update), otherwise a new device
- * is created (and logged as a Create). This means re-importing the same
- * spreadsheet — or a spreadsheet that was originally exported from this
- * system and then edited — will NOT create duplicate rows.
+ * Bulk CSV/Excel import. Required fields: Device Type, Serial Number,
+ * Location, Department — everything else (including Host Name and MAC
+ * Address) is optional to match real-world spreadsheets where those
+ * columns are frequently blank or corrupted (e.g. "#NAME?" formula
+ * errors). A missing/unusable hostname is auto-generated the same way
+ * as manually-added assets. De-duplicates against existing inventory by
+ * Serial Number OR MAC Address (only when a MAC is actually present —
+ * never matches on a blank MAC, which would incorrectly collide
+ * every MAC-less row against each other).
  */
 async function bulkImportAssets(req, res, next) {
   try {
@@ -294,70 +382,102 @@ async function bulkImportAssets(req, res, next) {
     const skipped = [];
 
     for (const row of rows) {
-      const hostName = row.hostName;
-      const serialNumber = row.serialNumber;
-      const macAddress = row.macAddress;
+  const serialNumber = sanitizeString(row.serialNumber);
+  const location = sanitizeString(row.location);
+  const department = sanitizeString(row.department);
+  const deviceType = normalizeDeviceType(row.deviceType);
+  
+  // Clean and sanitize the MAC address
+  const macAddress = cleanMacAddress(row.macAddress);
 
-      if (!hostName || !serialNumber || !macAddress) {
-        skipped.push({ row, reason: 'Missing required field (Host Name, Serial Number, or MAC Address).' });
-        continue;
-      }
-      if (!validateMacAddress(macAddress)) {
-        skipped.push({ row, reason: `Invalid MAC address format: "${macAddress}".` });
-        continue;
-      }
+  if (!serialNumber || !location || !department) {
+    skipped.push({ row, reason: 'Missing required field (Serial Number, Location, or Department).' });
+    continue;
+  }
 
-      const payload = {
-        oldHostName: row.oldHostName || '',
-        hostName,
-        ipAddress: row.ipAddress || '',
-        deviceType: row.deviceType || 'Other',
-        manufacturer: row.manufacturer || '',
-        model: row.model || '',
-        processor: row.processor || '',
-        memory: row.memory ? parseInt(row.memory, 10) || null : null,
-        diskStorageGB: row.diskStorageGB ? parseInt(row.diskStorageGB, 10) || null : null,
-        operatingSystem: row.operatingSystem || '',
-        serialNumber,
-        macAddress,
-        location: row.location || '',
-        lastUser: row.lastUser || '',
-        owner: row.owner || '',
-        department: row.department || '',
-        dataSource: 'CSV Import',
-        achievedBy: `${req.user.fullName} (CSV Import)`,
-        lastMaintenanceDate: row.lastMaintenanceDate || null,
-        notes: row.notes || '',
-        status: 'online',
-      };
+  // Validate cleaned MAC
+  if (macAddress && !validateMacAddress(macAddress)) {
+    skipped.push({ row, reason: `Invalid MAC address format: "${row.macAddress}".` });
+    continue;
+  }
 
-      const existing = await Device.findOne({
-        where: { [Op.or]: [{ serialNumber }, { macAddress }] },
-      });
+  let hostName = sanitizeString(row.hostName);
+  if (!isUsableHostname(hostName)) {
+    hostName = await generateHostname(location, department, deviceType);
+  }
 
-      if (existing) {
-        Object.assign(existing, payload);
-        await existing.save();
-        await logEvent({
-          deviceId: existing.id,
-          hostname: existing.hostName,
-          eventType: 'Updated',
-          eventCategory: 'updated',
-          userSource: `${req.user.fullName} (CSV Import)`,
-          changeSummary: 'Existing device updated via bulk CSV/Excel import (matched by serial number or MAC address).',
+  const payload = {
+    oldHostName: sanitizeString(row.oldHostName) || '',
+    hostName,
+    ipAddress: sanitizeString(row.ipAddress) || null,
+    deviceType,
+    manufacturer: sanitizeString(row.manufacturer) || '',
+    model: sanitizeString(row.model) || '',
+    processor: sanitizeString(row.processor) || '',
+    memory: row.memory ? parseInt(row.memory, 10) || null : null,
+    diskStorageGB: row.diskStorageGB ? parseInt(row.diskStorageGB, 10) || null : null,
+    operatingSystem: sanitizeString(row.operatingSystem) || '',
+    serialNumber,
+    macAddress: macAddress || null,
+    location,
+    lastUser: sanitizeString(row.lastUser) || '',
+    owner: sanitizeString(row.owner) || '',
+    department,
+    dataSource: 'CSV Import',
+    achievedBy: sanitizeString(row.achievedBy) || `${req.user.fullName} (CSV Import)`,
+    lastMaintenanceDate: row.lastMaintenanceDate || null,
+    notes: sanitizeString(row.notes) || '',
+    status: 'online',
+  };
+
+      // Only match on MAC address when one was actually provided — a
+      // blank MAC must never be used to match rows against each other.
+      const matchConditions = [{ serialNumber }];
+      if (macAddress) matchConditions.push({ macAddress });
+
+      // Each row's actual database write is isolated in its own
+      // try/catch. Without this, a single row hitting a DB-level
+      // constraint (column-length overflow, a duplicate unique value
+      // slipping past the pre-checks, etc.) would throw all the way up
+      // and abort the ENTIRE batch — silently discarding the outcome
+      // of every other row already processed, with no useful feedback
+      // beyond a generic 500 error.
+      try {
+        const existing = await Device.findOne({
+          where: { [Op.or]: matchConditions },
         });
-        updated.push(existing);
-      } else {
-        const asset = await Device.create(payload);
-        await logEvent({
-          deviceId: asset.id,
-          hostname: asset.hostName,
-          eventType: 'Created',
-          eventCategory: 'created',
-          userSource: `${req.user.fullName} (CSV Import)`,
-          changeSummary: 'Device enrolled via bulk CSV/Excel import.',
-        });
-        created.push(asset);
+
+        if (existing) {
+          Object.assign(existing, payload);
+          await existing.save();
+          await logEvent({
+            deviceId: existing.id,
+            hostname: existing.hostName,
+            eventType: 'Updated',
+            eventCategory: 'updated',
+            userSource: `${req.user.fullName} (CSV Import)`,
+            changeSummary: 'Existing device updated via bulk CSV/Excel import (matched by serial number or MAC address).',
+          });
+          updated.push(existing);
+        } else {
+          const asset = await Device.create(payload);
+          await logEvent({
+            deviceId: asset.id,
+            hostname: asset.hostName,
+            eventType: 'Created',
+            eventCategory: 'created',
+            userSource: `${req.user.fullName} (CSV Import)`,
+            changeSummary: 'Device enrolled via bulk CSV/Excel import.',
+          });
+          created.push(asset);
+        }
+      } catch (rowError) {
+        const reason = rowError.name === 'SequelizeUniqueConstraintError'
+          ? `Duplicate value conflicts with another record: ${rowError.errors?.map((e) => e.message).join(', ') || rowError.message}`
+          : rowError.name === 'SequelizeDatabaseError'
+            ? `Database rejected this row: ${rowError.original?.message || rowError.message}`
+            : `Failed to save this row: ${rowError.message}`;
+        skipped.push({ row, reason });
       }
     }
 
@@ -373,13 +493,6 @@ async function bulkImportAssets(req, res, next) {
   }
 }
 
-/**
- * Pings a device by IP address (works for ANY data source — Manual, CSV,
- * or Agent — as long as the record has an IP set). Uses the host OS's
- * native ping utility rather than a network library, so it works
- * without additional dependencies. Cross-platform flag handling: -n on
- * Windows, -c on macOS/Linux.
- */
 async function pingAsset(req, res, next) {
   try {
     const asset = await Device.findByPk(req.params.id);
@@ -428,4 +541,5 @@ module.exports = {
   pingAsset,
   generateHostname,
   validateMacAddress,
+  normalizeDeviceType,
 };

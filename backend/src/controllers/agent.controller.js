@@ -34,7 +34,6 @@ async function stageDevice(req, res, next) {
 
     const safeInstalledApps = normalizeInstalledApps(installedApps);
 
-    // If this MAC already has a pending record, refresh it instead of duplicating.
     let staging = await StagingDevice.findOne({
       where: { macAddress, status: 'PENDING_REVIEW' },
     });
@@ -116,6 +115,11 @@ async function approveStagedDevice(req, res, next) {
       return res.status(422).json({ message: 'owner, department, and location are required to approve a device.' });
     }
 
+    // The agent reports the machine's real Windows hostname (e.g. "HABIBA").
+    // Once approved, the device gets the org's canonical asset hostname
+    // following the same Location+Department+DeviceType+ID pattern used
+    // for manually-added assets — the original machine name is preserved
+    // in Old Host Name rather than discarded.
     const generatedHostName = await generateHostname(location, department, staging.deviceType);
 
     const device = await Device.create({

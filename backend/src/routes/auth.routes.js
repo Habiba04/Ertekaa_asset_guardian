@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-  login, me, listAdmins, createAdmin, updateAdminRole, revokeAdmin, changeMyPassword, resetAdminPassword,
+  login, me, listAdmins, createAdmin, updateAdminRole, revokeAdmin, changeMyPassword, resetAdminPassword, requestPasswordOtp, verifyPasswordOtp, resetPasswordWithToken,
 } = require('../controllers/auth.controller');
 const { requireAuth, requireRole, blockReadOnly } = require('../middlewares/auth.middleware');
 
@@ -15,5 +15,9 @@ router.post('/admins', requireAuth, requireRole('SUPER_ADMIN'), blockReadOnly, c
 router.patch('/admins/:id/role', requireAuth, requireRole('SUPER_ADMIN'), blockReadOnly, updateAdminRole);
 router.patch('/admins/:id/password', requireAuth, requireRole('SUPER_ADMIN'), blockReadOnly, resetAdminPassword);
 router.delete('/admins/:id', requireAuth, requireRole('SUPER_ADMIN'), blockReadOnly, revokeAdmin);
+
+router.post('/forgot-password/request-otp', requestPasswordOtp);
+router.post('/forgot-password/verify-otp', verifyPasswordOtp);
+router.post('/forgot-password/reset', resetPasswordWithToken);
 
 module.exports = router;

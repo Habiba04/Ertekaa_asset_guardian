@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "أسِت جارديان",
+    "name": "مدير الأصول",
     "tagline": "منصة إدارة أصول تقنية المعلومات"
   },
   "language": {
@@ -16,10 +16,10 @@
     "authenticating": "جارٍ التحقق...",
     "restrictedTitle": "وصول مقيّد.",
     "restrictedBody": "هذا النظام مخصص لموظفي تقنية المعلومات المصرح لهم فقط. يتم تسجيل ومراقبة جميع الجلسات.",
-    "footer": "أسِت جارديان الإصدار 2.1.4 · © 2025 Corp IT",
+    "footer": "مدير الأصول الإصدار 2.1.4 · © 2025 Corp IT",
     "invalidCredentials": "اسم المستخدم أو كلمة المرور غير صحيحة.",
     "forgotPasswordTitle": "نسيت كلمة المرور؟",
-    "forgotPasswordBody": "لا يرسل Asset Guardian رسائل إعادة تعيين كلمة المرور عبر البريد الإلكتروني. تواصل مع مسؤول رئيسي في مؤسستك — يمكنه إعادة تعيين كلمة مرورك من الإعدادات ← حسابات مسؤولي تقنية المعلومات."
+    "forgotPasswordBody": "لا يرسل Asset Manager رسائل إعادة تعيين كلمة المرور عبر البريد الإلكتروني. تواصل مع مسؤول رئيسي في مؤسستك — يمكنه إعادة تعيين كلمة مرورك من الإعدادات ← حسابات مسؤولي تقنية المعلومات."
   },
   "setup": {
     "title": "إنشاء حساب المسؤول الرئيسي",
@@ -48,12 +48,12 @@
     "superAdmin": "مسؤول رئيسي",
     "itAdmin": "مسؤول تقنية معلومات",
     "readOnlyAuditor": "مدقق للقراءة فقط",
-    "fleetConsole": "لوحة الأسطول"
+    "fleetConsole": "منصة إدارة الأصول"
   },
   "dashboard": {
     "title": "نظرة عامة على العمليات",
-    "subtitle": "حالة الأسطول اعتباراً من {{date}} · تحديث تلقائي كل 60 ثانية",
-    "metricTotalFleet": "إجمالي الأسطول",
+    "subtitle": "حالة الأجهزة اعتباراً من {{date}} · تحديث تلقائي كل 60 ثانية",
+    "metricTotalFleet": "إجمالي الأجهزة",
     "metricTotalFleetSub": "الأجهزة المسجلة",
     "metricActive": "نشط في المكتب",
     "metricActiveSub": "على الشبكة المحلية للشركة",
@@ -129,7 +129,19 @@
     "statusRemote": "عن بُعد",
     "statusRogue": "غير موثوق",
     "allDeviceTypes": "جميع أنواع الأجهزة",
-    "importToast": "تم إنشاء {{created}}، وتحديث {{updated}}، وتخطي {{skipped}}."
+    "importToast": "تم إنشاء {{created}}، وتحديث {{updated}}، وتخطي {{skipped}}.",
+    "columns": "الأعمدة",
+    "columnsPickerTitle": "إظهار/إخفاء الأعمدة",
+    "columnAlwaysShown": "يظهر دائمًا",
+    "colIpAddress": "عنوان IP",
+    "colMacAddress": "عنوان MAC",
+    "colSerialNumber": "الرقم التسلسلي",
+    "colProcessor": "المعالج",
+    "colMemory": "الذاكرة",
+    "colDiskStorage": "سعة التخزين",
+    "colLastUser": "آخر مستخدم",
+    "colOldHostName": "اسم المضيف القديم",
+    "colDataSource": "مصدر البيانات"
   },
   "drawer": {
     "tabHardware": "الأجهزة",
@@ -216,7 +228,8 @@
     "lastUser": "آخر مستخدم مسجّل",
     "maintenanceDate": "تاريخ آخر صيانة",
     "genericError": "حدث خطأ أثناء إنشاء هذا الجهاز. يرجى المحاولة مرة أخرى.",
-    "duplicateError": "يوجد بالفعل جهاز بنفس الرقم التسلسلي أو عنوان MAC في المخزون."
+    "duplicateError": "يوجد بالفعل جهاز بنفس الرقم التسلسلي أو عنوان MAC في المخزون.",
+    "optional": "اختياري"
   },
   "importModal": {
     "title": "استيراد الأجهزة من ملف",
@@ -233,7 +246,9 @@
     "created": "تم الإنشاء",
     "updated": "تم التحديث",
     "skipped": "تم التخطي",
-    "dedupeNotice": "الصفوف المطابقة لرقم تسلسلي أو عنوان MAC موجود مسبقًا ستُحدّث ذلك السجل بدلاً من إنشاء نسخة مكررة."
+    "dedupeNotice": "الصفوف المطابقة لرقم تسلسلي أو عنوان MAC موجود مسبقًا ستُحدّث ذلك السجل بدلاً من إنشاء نسخة مكررة.",
+    "requiredLabel": "مطلوب",
+    "everythingElseOptional": "كل شيء آخر اختياري."
   },
   "auditLogs": {
     "title": "سجلات التدقيق",
@@ -249,7 +264,7 @@
     "colChangeSummary": "تفاصيل التغيير",
     "noEvents": "لا توجد أحداث تطابق عوامل التصفية الحالية.",
     "showingCount": "عرض {{count}} من {{total}} حدث",
-    "retentionNote": "يتم الاحتفاظ بالسجلات لمدة 90 يوماً · جميع الأوقات بتوقيت UTC+0",
+    "retentionNote": "يتم الاحتفاظ بالسجلات · جميع الأوقات بتوقيت UTC+0",
     "catAll": "جميع الأحداث",
     "catAlert": "تنبيهات",
     "catCreated": "تم الإنشاء",
@@ -303,7 +318,14 @@
     "addAdminFailed": "تعذر إنشاء المسؤول. يرجى التحقق من البيانات والمحاولة مرة أخرى.",
     "allFieldsRequired": "جميع الحقول مطلوبة.",
     "emailInvalid": "يرجى إدخال بريد إلكتروني صالح (مثال: name@company.com).",
-    "passwordTooShort": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل."
+    "passwordTooShort": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.",
+    "newAdminSuccess": "تم إنشاء حساب المسؤول الجديد بنجاح.",
+    "revokeAdminSuccess": "تم إلغاء وصول المسؤول بنجاح.",
+    "roleChangedSuccess": "تم تحديث دور المسؤول بنجاح.",
+    "addDropdownSuccess": "تم إضافة القيمة بنجاح.",
+    "deleteDropdownSuccess": "تم حذف القيمة بنجاح.",
+    "rootBadge": "جذري",
+    "rootAccountTooltip": "هذا هو الحساب الجذري المحمي. فقط صاحب هذا الحساب يمكنه تغيير كلمة مروره، ولا يمكن حذفه أو تغيير دوره أبدًا."
   },
   "deviceType": {
     "Laptop": "حاسوب محمول",
@@ -312,6 +334,11 @@
     "Server": "خادم",
     "Printer": "طابعة",
     "Router": "موجّه",
+    "Firewall": "جدار حماية",
+    "Access Point": "نقطة وصول",
+    "DVR": "مسجل فيديو رقمي",
+    "Fingerprint Scanner": "جهاز بصمة",
+    "Screen": "شاشة",
     "Other": "أخرى"
   },
   "dataSource": {
@@ -342,6 +369,21 @@
     "successTitle": "تمت إعادة تعيين كلمة المرور بنجاح.",
     "successBody": "شارك كلمة المرور الجديدة مع المسؤول بشكل آمن."
   },
+  "forgotPassword": {
+    "title": "نسيت كلمة السر",
+    "emailInstructions": "أدخل بريدك الإلكتروني المسجل لاستلام رمز التحقق (OTP).",
+    "emailLabel": "البريد الإلكتروني",
+    "sendOtp": "إرسال رمز التحقق",
+    "emailError": "فشل إرسال رمز التحقق. يرجى التحقق من البريد الإلكتروني.",
+    "otpInstructions": "قمنا بإرسال رمز التحقق إلى",
+    "checkSpamNote": "(إذا لم تجد الرسالة في صندوق الوارد، يرجى التحقق من مجلد الرسائل غير المرغوب فيها / Spam.)",
+    "otpLabel": "رمز التحقق (OTP)",
+    "resendOtp": "إعادة إرسال الرمز",
+    "verifyOtp": "تأكيد الرمز",
+    "otpError": "رمز التحقق غير صحيح أو منتهي الصلاحية.",
+    "otpResent": "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني.",
+    "resendError": "فشل إعادة إرسال رمز التحقق."
+  },
   "common": {
     "loading": "جارٍ التحميل…",
     "error": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
@@ -350,5 +392,12 @@
     "close": "إغلاق",
     "confirm": "تأكيد",
     "actions": "الإجراءات"
+  },
+  "pagination": {
+    "showingRange": "عرض {{start}}–{{end}} من {{total}}",
+    "perPage": "{{count}} / صفحة",
+    "previous": "السابق",
+    "next": "التالي",
+    "pageOf": "صفحة {{page}} من {{totalPages}}"
   }
 }

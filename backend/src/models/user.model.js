@@ -39,6 +39,17 @@ User.init(
       allowNull: false,
       defaultValue: 'IT_ADMIN',
     },
+    // The very first account created via the Setup Wizard. This account
+    // cannot be deleted by anyone, its role cannot be changed by anyone
+    // (always stays SUPER_ADMIN), and no other admin — including other
+    // Super Admins — can reset its password via the admin Reset Password
+    // flow. Only the account holder can change their own password,
+    // through the self-service Change Password flow.
+    isRoot: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
     mfaEnabled: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -50,6 +61,14 @@ User.init(
       defaultValue: true,
     },
     lastLoginAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    resetOtp: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    resetOtpExpires: {
       type: DataTypes.DATE,
       allowNull: true,
     },

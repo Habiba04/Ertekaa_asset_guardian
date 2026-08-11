@@ -1,7 +1,7 @@
 {
   "app": {
-    "name": "Asset Guardian",
-    "tagline": "Fleet Intelligence Console"
+    "name": "Asset Manager",
+    "tagline": "IT Asset Intelligence Console"
   },
   "language": {
     "en": "EN",
@@ -16,10 +16,10 @@
     "authenticating": "Authenticating...",
     "restrictedTitle": "Restricted access.",
     "restrictedBody": "This console is for authorized IT personnel only. All sessions are logged and monitored.",
-    "footer": "Asset Guardian v2.1.4 · © 2025 Corp IT",
+    "footer": "Asset Manager v2.1.4 · © 2025 Corp IT",
     "invalidCredentials": "Invalid username or password.",
     "forgotPasswordTitle": "Forgot your password?",
-    "forgotPasswordBody": "Asset Guardian doesn't send password reset emails. Contact a Super Admin in your organization — they can reset your password for you from Settings → IT Administrator Accounts."
+    "forgotPasswordBody": "Asset Manager doesn't send password reset emails. Contact a Super Admin in your organization — they can reset your password for you from Settings → IT Administrator Accounts."
   },
   "setup": {
     "title": "Create the Super Admin Account",
@@ -48,12 +48,12 @@
     "superAdmin": "Super Admin",
     "itAdmin": "IT Admin",
     "readOnlyAuditor": "Read-Only Auditor",
-    "fleetConsole": "FLEET CONSOLE"
+    "fleetConsole": "SYSTEM CONSOLE"
   },
   "dashboard": {
     "title": "Operational Overview",
-    "subtitle": "Fleet status as of {{date}} · Auto-refreshes every 60 sec",
-    "metricTotalFleet": "Total Fleet",
+    "subtitle": "Asset status as of {{date}} · Auto-refreshes every 60 sec",
+    "metricTotalFleet": "Total Assets",
     "metricTotalFleetSub": "Enrolled devices",
     "metricActive": "Active in Office",
     "metricActiveSub": "On corporate LAN",
@@ -129,7 +129,19 @@
     "statusRemote": "Remote",
     "statusRogue": "Rogue",
     "allDeviceTypes": "All Device Types",
-    "importToast": "{{created}} created, {{updated}} updated, {{skipped}} skipped."
+    "importToast": "{{created}} created, {{updated}} updated, {{skipped}} skipped.",
+    "columns": "Columns",
+    "columnsPickerTitle": "Show/Hide Columns",
+    "columnAlwaysShown": "Always shown",
+    "colIpAddress": "IP Address",
+    "colMacAddress": "MAC Address",
+    "colSerialNumber": "Serial Number",
+    "colProcessor": "Processor",
+    "colMemory": "Memory",
+    "colDiskStorage": "Disk Storage",
+    "colLastUser": "Last User",
+    "colOldHostName": "Old Host Name",
+    "colDataSource": "Data Source"
   },
   "drawer": {
     "tabHardware": "Hardware",
@@ -216,7 +228,8 @@
     "lastUser": "Last Logged User",
     "maintenanceDate": "Last Maintenance Date",
     "genericError": "Something went wrong while creating this asset. Please try again.",
-    "duplicateError": "A device with this Serial Number or MAC Address already exists in the inventory."
+    "duplicateError": "A device with this Serial Number or MAC Address already exists in the inventory.",
+    "optional": "Optional"
   },
   "importModal": {
     "title": "Import Devices from File",
@@ -233,7 +246,9 @@
     "created": "Created",
     "updated": "Updated",
     "skipped": "Skipped",
-    "dedupeNotice": "Rows matching an existing Serial Number or MAC Address will update that record instead of creating a duplicate."
+    "dedupeNotice": "Rows matching an existing Serial Number or MAC Address will update that record instead of creating a duplicate.",
+    "requiredLabel": "Required",
+    "everythingElseOptional": "Everything else is optional"
   },
   "auditLogs": {
     "title": "Audit Logs",
@@ -249,7 +264,7 @@
     "colChangeSummary": "Change Details",
     "noEvents": "No events match your current filters.",
     "showingCount": "Showing {{count}} of {{total}} events",
-    "retentionNote": "Logs retained for 90 days · All times UTC+0",
+    "retentionNote": "Logs retained · All times UTC+0",
     "catAll": "All Events",
     "catAlert": "Alerts",
     "catCreated": "Created",
@@ -303,7 +318,14 @@
     "addAdminFailed": "Could not create administrator. Please check the details and try again.",
     "allFieldsRequired": "All fields are required.",
     "emailInvalid": "Please enter a valid email address (e.g. name@company.com).",
-    "passwordTooShort": "Password must be at least 8 characters long."
+    "passwordTooShort": "Password must be at least 8 characters long.",
+    "newAdminSuccess": "New administrator account created successfully.",
+    "revokeAdminSuccess": "Administrator access revoked successfully.",
+    "roleChangedSuccess": "Administrator role updated successfully.",
+    "addDropdownSuccess": "Value added successfully.",
+    "deleteDropdownSuccess": "Value deleted successfully.",
+    "rootBadge": "Root",
+    "rootAccountTooltip": "This is the protected root account. Only this account holder can change its password, and it can never be deleted or reassigned."
   },
   "deviceType": {
     "Laptop": "Laptop",
@@ -312,6 +334,11 @@
     "Server": "Server",
     "Printer": "Printer",
     "Router": "Router",
+    "Firewall": "Firewall",
+    "Access Point": "Access Point",
+    "DVR": "DVR",
+    "Fingerprint Scanner": "Fingerprint Scanner",
+    "Screen": "Screen",
     "Other": "Other"
   },
   "dataSource": {
@@ -342,6 +369,21 @@
     "successTitle": "Password reset successfully.",
     "successBody": "Share the new password with the administrator securely."
   },
+  "forgotPassword": {
+    "title": "Forgot Password",
+    "emailInstructions": "Enter your registered email address to receive a verification OTP.",
+    "emailLabel": "Email Address",
+    "sendOtp": "Send OTP",
+    "emailError": "Failed to send OTP. Please check the email.",
+    "otpInstructions": "We sent a verification code to",
+    "checkSpamNote": "(If you don't see it in your inbox, please check your spam/junk folder.)",
+    "otpLabel": "Verification OTP",
+    "resendOtp": "Resend OTP",
+    "verifyOtp": "Verify OTP",
+    "otpError": "Invalid or expired OTP.",
+    "otpResent": "A new OTP has been sent to your email.",
+    "resendError": "Failed to resend OTP."
+  },
   "common": {
     "loading": "Loading…",
     "error": "Something went wrong. Please try again.",
@@ -350,5 +392,12 @@
     "close": "Close",
     "confirm": "Confirm",
     "actions": "Actions"
+  },
+  "pagination": {
+    "showingRange": "Showing {{start}}–{{end}} of {{total}}",
+    "perPage": "{{count}} / page",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{page}} of {{totalPages}}"
   }
 }

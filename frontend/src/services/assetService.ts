@@ -6,6 +6,8 @@ export interface ListAssetsParams {
   department?: string
   location?: string
   deviceType?: string
+  page?: number
+  pageSize?: number
 }
 
 export interface ListAssetsResponse {

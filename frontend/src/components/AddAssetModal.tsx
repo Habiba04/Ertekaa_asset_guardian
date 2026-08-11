@@ -7,8 +7,15 @@ import { IconX, IconCheck } from './Icons'
 import Portal from './Portal'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 
-const DEVICE_TYPES: DeviceType[] = ['Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router', 'Other']
-const MAC_ADDRESS_REGEX = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/
+const DEVICE_TYPES: DeviceType[] = [
+  'Laptop', 'PC', 'Switch', 'Server', 'Printer', 'Router',
+  'Firewall', 'Access Point', 'DVR', 'Fingerprint Scanner', 'Screen', 'Other',
+]
+const isValidMacInput = (value: string) => {
+  if (!value || !value.trim()) return true
+  const macs = value.split(',').map((s) => s.trim()).filter(Boolean)
+  return macs.length > 0 && macs.every((mac) => /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/.test(mac))
+}
 
 function slugify(value: string): string {
   return (value || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
@@ -59,8 +66,10 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
   const validate = (): boolean => {
     const next: Partial<Record<keyof NewAssetForm, string>> = {}
     if (!form.serialNumber.trim()) next.serialNumber = t('addAssetModal.serialRequired')
-    if (!form.macAddress.trim()) next.macAddress = t('addAssetModal.macRequired')
-    else if (!MAC_ADDRESS_REGEX.test(form.macAddress.trim())) next.macAddress = t('addAssetModal.macFormatError')
+    // MAC address is optional — only validate its format if one was entered.
+    if (!isValidMacInput(form.macAddress)) {
+      next.macAddress = t('addAssetModal.macFormatError')
+    }
     if (!form.owner.trim()) next.owner = t('addAssetModal.ownerRequired')
     if (!form.department.trim()) next.department = t('addAssetModal.departmentRequired')
     if (!form.location.trim()) next.location = t('addAssetModal.locationRequired')
@@ -188,7 +197,7 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
                   <select className="input-base" value={form.deviceType} onChange={(e) => update('deviceType', e.target.value)}>
                     {DEVICE_TYPES.map((dt) => (
                       <option key={dt} value={dt}>
-                        {t(`deviceType.${dt}`)}
+                        {t(`deviceType.${dt}`, dt)}
                       </option>
                     ))}
                   </select>
@@ -237,13 +246,17 @@ export default function AddAssetModal({ dropdowns, onClose, onCreated }: AddAsse
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.macAddress')}</label>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    {t('addAssetModal.macAddress')} <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>({t('addAssetModal.optional')})</span>
+                  </label>
                   <input className="input-base ltr-always" value={form.macAddress} onChange={(e) => update('macAddress', e.target.value)} placeholder="AA:BB:CC:DD:EE:FF" />
                   {errors.macAddress && <span style={{ fontSize: 11, color: '#cf222e' }}>{errors.macAddress}</span>}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>{t('addAssetModal.ipAddress')}</label>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    {t('addAssetModal.ipAddress')} <span style={{ fontWeight: 400, color: 'var(--text-secondary)' }}>({t('addAssetModal.optional')})</span>
+                  </label>
                   <input className="input-base ltr-always" value={form.ipAddress} onChange={(e) => update('ipAddress', e.target.value)} placeholder="192.168.1.10" />
                 </div>
 

@@ -10,6 +10,11 @@ const COLORS: Record<DeviceType, string> = {
   Printer: '#1a7f37',
   Router: '#bf3989',
   Other: '#656d76',
+  Firewall: '#d1242f',
+  'Access Point': '#0550ae',
+  DVR: '#8250df',
+  'Fingerprint Scanner': '#1a7f37',
+  Screen: '#9a6700',
 }
 
 export default function DeviceTypeBadge({ type }: { type: DeviceType }) {
@@ -32,7 +37,7 @@ export default function DeviceTypeBadge({ type }: { type: DeviceType }) {
       }}
     >
       <IconServer size={11} color={color} />
-      {t(`deviceType.${type}`)}
+      {t(`deviceType.${type}`, type)}
     </span>
   )
 }

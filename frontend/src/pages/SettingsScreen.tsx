@@ -5,7 +5,7 @@ import { settingsService } from '../services/settingsService'
 import { agentService } from '../services/agentService'
 import { useAuth } from '../AuthContext'
 import type { AdminUser, DropdownState, DropdownValue, StagingCounts, UserRole } from '../types'
-import { IconPlus, IconTrash, IconDownload, IconCheck, IconKey } from '../components/Icons'
+import { IconPlus, IconTrash, IconDownload, IconCheck, IconKey, IconLock } from '../components/Icons'
 import ResetPasswordModal from '../components/ResetPasswordModal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { useMediaQuery } from '../hooks/useMediaQuery'
@@ -13,6 +13,11 @@ import { useMediaQuery } from '../hooks/useMediaQuery'
 const ROLES: UserRole[] = ['SUPER_ADMIN', 'IT_ADMIN', 'READ_ONLY_AUDITOR']
 const EMPTY_DROPDOWNS: DropdownState = { departments: [], locations: [] }
 const DEFAULT_SHARE_PATH = '\\\\YOUR-SERVER\\YOUR-SHARE\\asset-guardian'
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function roleLabelKey(role: UserRole) {
+  return role === 'SUPER_ADMIN' ? 'settings.roleSuperAdmin' : role === 'IT_ADMIN' ? 'settings.roleItAdmin' : 'settings.roleReadOnly'
+}
 
 export default function SettingsScreen() {
   const { t } = useTranslation()
@@ -35,6 +40,12 @@ export default function SettingsScreen() {
   const [deletingDropdownBusy, setDeletingDropdownBusy] = useState(false)
   const [toast, setToast] = useState('')
 
+  useEffect(() => {
+    if (!toast) return
+    const timeout = setTimeout(() => setToast(''), 3200)
+    return () => clearTimeout(timeout)
+  }, [toast])
+
   const loadAll = async () => {
     const [adminsResp, dropdownsResp, countsResp] = await Promise.all([
       authService.listAdmins(),
@@ -49,13 +60,6 @@ export default function SettingsScreen() {
   useEffect(() => {
     loadAll()
   }, [])
-
-  useEffect(() => {
-    if(!toast) return
-    const timeout = setTimeout(() => setToast(''), 3200)
-    return () => clearTimeout(timeout)
-  }, [toast])
-  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   const handleAddAdmin = async () => {
     setAddAdminError('')
@@ -79,17 +83,18 @@ export default function SettingsScreen() {
       await authService.createAdmin(newAdmin)
       setNewAdmin({ fullName: '', email: '', username: '', password: '', role: 'IT_ADMIN' })
       setShowAddAdmin(false)
+      setToast(t('settings.newAdminSuccess', { name: newAdmin.fullName }))
       loadAll()
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       setAddAdminError(message || t('settings.addAdminFailed'))
     }
-    setToast(`${newAdmin.fullName} is created!`)
   }
 
   const handleRoleChange = async (id: string, role: UserRole) => {
+    const admin = admins.find((a) => a.id === id)
     await authService.updateAdminRole(id, role)
-    setToast(`Role Changed Successfully!`)
+    if (admin) setToast(t('settings.roleChangedSuccess', { name: admin.fullName, role: t(roleLabelKey(role)) }))
     loadAll()
   }
 
@@ -98,21 +103,21 @@ export default function SettingsScreen() {
     setRevoking(true)
     try {
       await authService.revokeAdmin(revokingAdmin.id)
+      setToast(t('settings.adminRevokedSuccess', { name: revokingAdmin.fullName }))
       setRevokingAdmin(null)
       await loadAll()
     } finally {
       setRevoking(false)
     }
-    setToast(`Admin is Revoked!`)
   }
 
   const handleAddDropdown = async (type: 'departments' | 'locations') => {
     const value = type === 'departments' ? newDept : newLoc
     if (!value.trim()) return
     await settingsService.addDropdownValue(type, value.trim())
+    setToast(t('settings.addDropdownSuccess', { value: value.trim() }))
     if (type === 'departments') setNewDept('')
     else setNewLoc('')
-    setToast(`Success!`)
     loadAll()
   }
 
@@ -121,12 +126,12 @@ export default function SettingsScreen() {
     setDeletingDropdownBusy(true)
     try {
       await settingsService.deleteDropdownValue(deletingDropdown.type, deletingDropdown.entry.id)
+      setToast(t('settings.deleteDropdownSuccess', { value: deletingDropdown.entry.value }))
       setDeletingDropdown(null)
       await loadAll()
     } finally {
       setDeletingDropdownBusy(false)
     }
-    setToast(`Success!`)
   }
 
   const gpoCommand = `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& { ${sharePath}\\install-agent.bat }"`
@@ -148,10 +153,11 @@ export default function SettingsScreen() {
         <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{t('settings.title')}</div>
         <div style={{ fontSize: 12.5, color: 'var(--text-secondary)', marginTop: 4 }}>{t('settings.subtitle')}</div>
       </div>
+
       {toast && (
-        <div style={{ backgroundColor: 'rgba(26,127,55,0.1)', color: '#1a7f37', fontSize: 12.5, fontWeight: 500, padding: '8px 14px', borderRadius: 8, marginBottom: 14, display: 'flex', alignItems:"center", gap:6}}>
-          <IconCheck size={13} color="#1a7f37" /> 
-          {toast} 
+        <div style={{ backgroundColor: 'rgba(26,127,55,0.1)', color: '#1a7f37', fontSize: 12.5, fontWeight: 500, padding: '8px 14px', borderRadius: 8, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <IconCheck size={13} color="#1a7f37" />
+          {toast}
         </div>
       )}
 
@@ -179,7 +185,7 @@ export default function SettingsScreen() {
             <select className="input-base" value={newAdmin.role} onChange={(e) => setNewAdmin((p) => ({ ...p, role: e.target.value as UserRole }))}>
               {ROLES.map((r) => (
                 <option key={r} value={r}>
-                  {t(`settings.role${r === 'SUPER_ADMIN' ? 'SuperAdmin' : r === 'IT_ADMIN' ? 'ItAdmin' : 'ReadOnly'}`)}
+                  {t(roleLabelKey(r))}
                 </option>
               ))}
             </select>
@@ -198,10 +204,11 @@ export default function SettingsScreen() {
         )}
 
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 520 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 620 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('settings.fullName')}</th>
+                <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('settings.username')}</th>
                 <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('settings.email')}</th>
                 <th style={{ padding: '8px 10px', textAlign: 'start', fontWeight: 600, color: 'var(--text-secondary)' }}>{t('settings.role')}</th>
                 {(currentUser?.role !== 'IT_ADMIN' &&
@@ -212,29 +219,46 @@ export default function SettingsScreen() {
             <tbody>
               {admins.map((admin) => (
                 <tr key={admin.id} style={{ borderBottom: '1px solid var(--border-faint)' }}>
-                  <td style={{ padding: '8px 10px', fontWeight: 600, color: 'var(--text-primary)' }}>{admin.fullName}</td>
+                  <td style={{ padding: '8px 10px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {admin.fullName}
+                      {admin.isRoot && (
+                        <span
+                          title={t('settings.rootAccountTooltip') ?? ''}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, fontWeight: 700,
+                            color: '#9a6700', backgroundColor: 'rgba(154,103,0,0.1)', padding: '2px 6px', borderRadius: 10,
+                          }}
+                        >
+                          <IconLock size={9} color="#9a6700" />
+                          {t('settings.rootBadge')}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td style={{ padding: '8px 10px', color: 'var(--text-body)' }} className="ltr-always">{admin.username}</td>
                   <td style={{ padding: '8px 10px', color: 'var(--text-body)' }}>{admin.email}</td>
                   <td style={{ padding: '8px 10px' }}>
-                    {currentUser?.role === 'SUPER_ADMIN' && admin.id !== currentUser.id ? (
+                    {currentUser?.role === 'SUPER_ADMIN' && admin.id !== currentUser.id && !admin.isRoot ? (
                       <select className="input-base" style={{ padding: '4px 8px', width: 'auto' }} value={admin.role} onChange={(e) => handleRoleChange(admin.id, e.target.value as UserRole)}>
                         {ROLES.map((r) => (
                           <option key={r} value={r}>
-                            {t(`settings.role${r === 'SUPER_ADMIN' ? 'SuperAdmin' : r === 'IT_ADMIN' ? 'ItAdmin' : 'ReadOnly'}`)}
+                            {t(roleLabelKey(r))}
                           </option>
                         ))}
                       </select>
                     ) : (
-                      t(`settings.role${admin.role === 'SUPER_ADMIN' ? 'SuperAdmin' : admin.role === 'IT_ADMIN' ? 'ItAdmin' : 'ReadOnly'}`)
+                      t(roleLabelKey(admin.role))
                     )}
                   </td>
                   <td style={{ padding: '8px 10px' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
-                      {currentUser?.role === 'SUPER_ADMIN' && (
+                      {currentUser?.role === 'SUPER_ADMIN' && !admin.isRoot && (
                         <button type="button" className="btn-ghost" style={{ padding: '4px 8px', fontSize: 11.5 }} onClick={() => setResettingAdmin(admin)}>
                           <IconKey size={11} /> {t('settings.resetPassword')}
                         </button>
                       )}
-                      {currentUser?.role === 'SUPER_ADMIN' && admin.id !== currentUser.id && (
+                      {currentUser?.role === 'SUPER_ADMIN' && admin.id !== currentUser.id && !admin.isRoot && (
                         <button type="button" className="btn-danger" onClick={() => setRevokingAdmin(admin)}>
                           <IconTrash size={11} /> {t('settings.remove')}
                         </button>
