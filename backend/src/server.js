@@ -9,7 +9,7 @@ const { testConnection } = require('../config/database');
 const { syncDatabase } = require('./models');
 const apiRouter = require('./routes');
 const { notFoundHandler, errorHandler } = require('./middlewares/errorHandler.middleware');
-const { updateOfflineDevices } = require('../src/controllers/asset.controller');
+const { updateOfflineDevices, pingAgentlessDevices } = require('../src/controllers/asset.controller');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -43,9 +43,15 @@ app.use('/api', apiRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+// Run agent timeout check every 5 minutes
 setInterval(() => {
   updateOfflineDevices();
 }, 5 * 60 * 1000);
+
+// Run ping sweep for routers/switches every 10 minutes
+setInterval(() => {
+  pingAgentlessDevices();
+}, 10 * 60 * 1000);
 
 async function start() {
   try {
