@@ -34,6 +34,47 @@ async function stageDevice(req, res, next) {
 
     const safeInstalledApps = normalizeInstalledApps(installedApps);
 
+    // 1️⃣ CHECK IF DEVICE IS ALREADY APPROVED & EXISTS IN ACTIVE INVENTORY
+    const existingDevice = await Device.findOne({
+      where: serialNumber
+        ? { serialNumber }
+        : { macAddress },
+    });
+
+    if (existingDevice) {
+      // Direct telemetry sync: Update the active asset directly without clogging staging!
+      Object.assign(existingDevice, {
+        oldHostName: hostName,
+        ipAddress,
+        processor: processor || existingDevice.processor,
+        memory: memory || existingDevice.memory,
+        diskStorageGB: diskStorageGB || existingDevice.diskStorageGB,
+        installedApps: safeInstalledApps,
+        operatingSystem: operatingSystem || existingDevice.operatingSystem,
+        manufacturer: manufacturer || existingDevice.manufacturer,
+        model: model || existingDevice.model,
+        status: 'online',
+        lastSeen: new Date(),
+      });
+
+      await existingDevice.save();
+
+      await AuditLog.create({
+        deviceId: existingDevice.id,
+        hostname: existingDevice.hostName,
+        eventType: 'Agent Sync',
+        eventCategory: 'checkin',
+        userSource: 'Guardian Agent',
+        changeSummary: `Live telemetry updated for active device (MAC ${macAddress}).`,
+      });
+
+      return res.status(200).json({
+        message: 'Active device telemetry updated directly.',
+        deviceId: existingDevice.id,
+      });
+    }
+
+    // 2️⃣ CHECK IF DEVICE IS ALREADY PENDING IN STAGING QUEUE
     let staging = await StagingDevice.findOne({
       where: { macAddress, status: 'PENDING_REVIEW' },
     });
@@ -49,6 +90,7 @@ async function stageDevice(req, res, next) {
       });
       await staging.save();
     } else {
+      // 3️⃣ NEW UNKNOWN DEVICE -> INSERT INTO STAGING QUEUE
       staging = await StagingDevice.create({
         hostName, ipAddress, serialNumber, macAddress, processor, memory, diskStorageGB,
         installedApps: safeInstalledApps,
@@ -68,7 +110,7 @@ async function stageDevice(req, res, next) {
       changeSummary: `Telemetry received and staged for review (MAC ${macAddress}).`,
     });
 
-    res.status(202).json({ message: 'Telemetry staged for admin review.', stagingId: staging.id });
+    return res.status(202).json({ message: 'Telemetry staged for admin review.', stagingId: staging.id });
   } catch (err) {
     next(err);
   }
