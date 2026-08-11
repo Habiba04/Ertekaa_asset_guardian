@@ -9,6 +9,7 @@ const { testConnection } = require('../config/database');
 const { syncDatabase } = require('./models');
 const apiRouter = require('./routes');
 const { notFoundHandler, errorHandler } = require('./middlewares/errorHandler.middleware');
+const { updateOfflineDevices } = require('../src/controllers/asset.controller');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -16,7 +17,12 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+    origin: [
+      process.env.CLIENT_ORIGIN,
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://10.20.1.19:5173',
+    ].filter(Boolean),
     credentials: true,
   })
 );
@@ -37,12 +43,16 @@ app.use('/api', apiRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
+setInterval(() => {
+  updateOfflineDevices();
+}, 5 * 60 * 1000);
+
 async function start() {
   try {
     await testConnection();
     await syncDatabase();
-    app.listen(PORT, () => {
-      console.log(`[server] Asset Guardian API listening on http://localhost:${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`[server] Asset Guardian API listening on http://0.0.0.0:${PORT}`);
     });
   } catch (err) {
     console.error('[server] Failed to start:', err);

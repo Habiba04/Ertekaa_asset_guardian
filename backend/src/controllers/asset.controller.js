@@ -527,6 +527,35 @@ async function pingAsset(req, res, next) {
     next(err);
   }
 }
+/**
+ * Sweeps the database for active devices whose lastSeen timestamp
+ * is older than 30 minutes and updates their status to 'remote' / 'offline'.
+ */
+async function updateOfflineDevices() {
+  try {
+    const TIMEOUT_MINUTES = 30;
+    const thresholdDate = new Date(Date.now() - TIMEOUT_MINUTES * 60 * 1000);
+
+    const [updatedCount] = await Device.update(
+      { status: 'remote' }, // or 'offline' depending on your ENUM
+      {
+        where: {
+          status: 'online',
+          lastSeen: {
+            [Op.lt]: thresholdDate, // lastSeen < 30 minutes ago
+          },
+        },
+      }
+    );
+
+    if (updatedCount > 0) {
+      console.log(`[Status Monitor] Marked ${updatedCount} inactive device(s) as remote/offline.`);
+    }
+  } catch (err) {
+    console.error('[Status Monitor Error]:', err);
+  }
+}
+
 
 module.exports = {
   listAssets,
@@ -542,4 +571,5 @@ module.exports = {
   generateHostname,
   validateMacAddress,
   normalizeDeviceType,
+  updateOfflineDevices,
 };
