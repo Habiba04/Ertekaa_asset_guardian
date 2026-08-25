@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const ping = require('ping');
 const { exec } = require('child_process');
 const os = require('os');
 const { Device, AuditLog } = require('../models');
@@ -527,6 +528,69 @@ async function pingAsset(req, res, next) {
     next(err);
   }
 }
+/**
+ * Sweeps the database for active devices whose lastSeen timestamp
+ * is older than 30 minutes and updates their status to 'remote' / 'offline'.
+ */
+async function updateOfflineDevices() {
+  try {
+    const TIMEOUT_MINUTES = 30;
+    const thresholdDate = new Date(Date.now() - TIMEOUT_MINUTES * 60 * 1000);
+
+    const [updatedCount] = await Device.update(
+      { status: 'remote' }, // or 'offline' depending on your ENUM
+      {
+        where: {
+          status: 'online',
+          lastSeen: {
+            [Op.lt]: thresholdDate, // lastSeen < 30 minutes ago
+          },
+        },
+      }
+    );
+
+    if (updatedCount > 0) {
+      console.log(`[Status Monitor] Marked ${updatedCount} inactive device(s) as remote/offline.`);
+    }
+  } catch (err) {
+    console.error('[Status Monitor Error]:', err);
+  }
+}
+
+async function pingAgentlessDevices() {
+  try {
+    // Find all non-agent devices with an IP address
+    const agentlessDevices = await Device.findAll({
+      where: {
+        dataSource: { [Op.ne]: 'Agent' }, // 'Manual' or 'CSV Import'
+        ipAddress: { [Op.and]: [{ [Op.ne]: null }, { [Op.ne]: '' }] },
+      },
+    });
+
+    for (const device of agentlessDevices) {
+      // Perform ICMP ping with a 2-second timeout
+      const res = await ping.promise.probe(device.ipAddress, {
+        timeout: 2,
+        extra: ['-c', '1'], // Send 1 packet
+      });
+
+      const newStatus = res.alive ? 'online' : 'remote'; // or 'offline'[cite: 3]
+
+      // Only update and save if the status actually changed
+      if (device.status !== newStatus) {
+        device.status = newStatus;
+        if (res.alive) {
+          device.lastSeen = new Date();
+        }
+        await device.save();
+        console.log(`[Ping Check] Device ${device.hostName} (${device.ipAddress}) is now ${newStatus}`);
+      }
+    }
+  } catch (err) {
+    console.error('[Ping Check Error]:', err);
+  }
+}
+
 
 module.exports = {
   listAssets,
@@ -542,4 +606,6 @@ module.exports = {
   generateHostname,
   validateMacAddress,
   normalizeDeviceType,
+  updateOfflineDevices,
+  pingAgentlessDevices,
 };
