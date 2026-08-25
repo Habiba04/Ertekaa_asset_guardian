@@ -206,9 +206,9 @@ export default function AuditLogsScreen() {
         />
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, fontSize: 11.5, color: 'var(--text-secondary)' }}>
+      {/* <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, fontSize: 11.5, color: 'var(--text-secondary)' }}>
         <span>{t('auditLogs.retentionNote')}</span>
-      </div>
+      </div> */}
     </div>
   )
 }
